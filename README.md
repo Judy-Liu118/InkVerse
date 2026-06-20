@@ -90,24 +90,32 @@ hf download openai/clip-vit-base-patch32 --local-dir D:\AI_Models\clip-vit-base-
 git clone https://github.com/Judy-Liu118/InkVerse.git
 cd InkVerse
 pip install -r requirements.txt
+cp .env.example .env          # 仅 Windows PowerShell：Copy-Item .env.example .env
 ```
 
-项目根目录创建 `.env`：
+编辑 `.env` 填入需要的 Key 和（可选）本地模型路径：
 
 ```env
+# 必填
 DASHSCOPE_API_KEY=sk-xxxxxxxx     # 阿里百炼（评分/提示词/图像 API）
+
+# 可选 —— 不填则启动时自动隐藏对应「本地」选项，仅保留 API 后端
+# BASE_MODEL_PATH=D:\AI_Models\Qwen2.5-1.5B-Instruct
+# LORA_PATH=./models/poetry_lora
+# ZIMAGE_PATH=D:\AI_Models\z_image_fp8_full
 ```
 
-编辑 `config.py` 中的模型路径：
+**纯 API 模式**：跳过模型下载、只配 `DASHSCOPE_API_KEY` 即可运行；UI 会自动只显示百炼 API 后端选项。
 
-```python
-BASE_MODEL_PATH = r"D:\AI_Models\Qwen2.5-1.5B-Instruct"
-LORA_PATH = "models/poetry_lora"
-ZIMAGE_PATH = "D:/AI_Models/z_image_fp8_full"
-CLIP_MODEL_PATH = r"D:\AI_Models\clip-vit-base-patch32"
+**本地 + API 混合模式**：填入三条本地路径，UI 同时显示本地 LoRA / Z-Image 与 API 后端，按需切换。
+
+启动 banner 会打印每项资源的可用性，方便确认当前在哪种模式下运行：
+
 ```
-
-无 API 时，将评分、诗名、提示词模型选为"本地"，图像后端选"本地 Z-Image"。
+本地 LLM 基座:     可用 / 未启用（API 模式）
+本地 LoRA Adapter: 可用 / 未启用
+本地 Z-Image:     可用 / 未启用（百炼 API 模式）
+```
 
 ### 运行
 
@@ -223,13 +231,13 @@ python app.py
 ```
 InkVerse/
 ├── app.py                  # Gradio UI
-├── config.py               # 全局配置
+├── config.py               # 全局配置 + 本地模型路径可用性探测
 ├── core/
 │   ├── agent/
-│   │   ├── agent.py        # 创作引擎
+│   │   ├── agent.py        # 创作引擎（PoetryAgent，_phase_* 主流水线）
 │   │   ├── autonomous.py   # 全自主模式调度
 │   │   ├── state.py        # 状态与追踪
-│   │   └── tools.py        # 工具抽象层
+│   │   └── tools.py        # Tool 抽象 + ToolRegistry（Function Calling 兼容）
 │   ├── poem/
 │   │   ├── generator.py    # 古诗生成 + Arena 海选
 │   │   ├── scorer.py       # 评分 + pairwise + 切题评估
@@ -239,24 +247,114 @@ InkVerse/
 │   │   ├── prompt.py       # 提示词生成器
 │   │   └── api.py          # 百炼 API 客户端
 │   ├── models/
-│   │   ├── adapter.py      # 统一模型适配层
-│   │   └── manager.py      # 显存管理
+│   │   ├── adapter.py      # 统一模型适配层（local/deepseek/qwen）
+│   │   └── manager.py      # 显存管理（重型依赖延迟加载）
 │   ├── evaluation/
 │   │   └── clip.py         # CLIP 评分器
 │   └── logger.py
+├── prompts/                # 集中化 prompt YAML（含 README 与版本号）
+├── tests/                  # pytest 单测（adapter/state/scorer/tools/clip/prompts）
 ├── models/                 # LoRA 权重
 ├── outputs/                # 生成的图像与报告
 └── fonts/
 ```
 
+## Prompt 集中管理
+
+所有 LLM system / user prompt 抽离到 `prompts/` 目录，以 YAML 形式管理，由 `core.prompts` 模块统一加载渲染：
+
+```python
+from core.prompts import render_messages
+
+messages = render_messages(
+    "agent.refine_poem",
+    expected_chars=7, expected_lines=4,
+    old_poem="...", feedback="加强意境深度",
+)
+```
+
+- **可审阅**：git diff 时 prompt 变更不被代码改动淹没
+- **可枚举**：`list_prompts()` 一键列出全部 prompt，便于审计与 A/B 测试
+- **可追踪**：每个 YAML 自带 `version` + `description`，配合 git 即天然版本管理
+- **fail-fast**：缺变量直接抛 `KeyError`，避免静默生成残缺 prompt
+
+详见 [`prompts/README.md`](prompts/README.md)。
+
+## Tool 抽象与可调度性
+
+`core.agent.tools` 提供了一套 OpenAI Function Calling 兼容的工具层，把 `PoetryAgent` 的每个创作阶段（规划/生成/抽取意象/命名/提示词/自检/生图/反思/改诗/改图）封装成可枚举、可 introspection 的 Tool。每个 Tool 既可被业务代码直接调用，也可通过 `to_function_schemas()` 导出为 LLM tools 描述，用于未来对接 MCP、Agent 服务化或外部调度。
+
+```python
+from core.agent import PoetryAgent
+
+agent = PoetryAgent(...)
+reg = agent.tool_registry
+print(reg.names)
+# ['plan', 'generate_poem', 'extract_visual_keywords', 'generate_title',
+#  'generate_image_prompt', 'review_image_prompt', 'generate_image',
+#  'reflect', 'refine_poem', 'edit_image']
+
+schemas = reg.to_function_schemas()    # 可直接喂给 OpenAI tools=[...]
+state = reg.execute("plan", state)      # 按名调度
+```
+
+`PoetryAgent` 内部仍以 `_phase_*` 方法实现业务，Tool 层只做轻量 facade —— 避免维护两套实现。
+
+## 离线评估
+
+`eval/` 目录提供 4 个独立可跑的评估脚本，用于量化项目里的核心设计点：
+
+```bash
+# 1. 诗歌生成模型质量对比（LoRA vs API）
+python -m eval.eval_poem --model-a local_lora --model-b qwen-plus --n 10
+
+# 2. 双锚点 CLIP vs 单锚点（项目核心创新）
+python -m eval.eval_clip --n 10
+
+# 3. 自动方向性诗评 + refine_poem 的提升幅度
+python -m eval.eval_refine --n 10
+
+# 4. 全自主模式 vs 单轮模式 CLIP 终值 + 耗时对比
+python -m eval.eval_autonomous --n 5
+```
+
+每次跑完会在 `outputs/eval/` 下落两份产物：
+- `<name>_<timestamp>.json` —— 原始数据，便于二次分析
+- `<name>_<timestamp>.md`   —— markdown 报告，含均值/std/配对差值/胜率/抽样对照，可直接抄进实验章节
+
+详见 [`eval/README.md`](eval/README.md)（含 benchmark 数据集说明、参数约定、结果解读建议）。
+
+## 测试
+
+```bash
+pytest tests/ -v
+# 35 passed in ~6s
+```
+
+覆盖：
+- `test_adapter.py` —— ModelAdapter 后端选择、env-var 回退、key 优先级
+- `test_state.py` —— AgentState 默认值、trace 追踪、序列化往返、Phase 枚举稳定性
+- `test_scorer.py` —— 平仄/押韵评分边界、合掌词库、堆砌词黑名单
+- `test_clip_weights.py` —— CLIP 双锚点稀疏关键词自适应权重切换
+- `test_tools.py` —— ToolRegistry 注册/查找/调度、Function Calling schema 形状
+- `test_prompts.py` —— prompt YAML 解析、变量插值、缺变量 fail-fast、loader 缓存
+
 ## 依赖
 
-- `torch` + `transformers` — 本地模型推理与 CLIP
-- `unsloth` + `peft` — Qwen2.5 4-bit LoRA 加载
-- `diffusers` — Z-Image Turbo FP8 扩散模型
-- `openai` — 阿里百炼 API
-- `pypinyin` + `pingshui_rhyme` — 平仄标注与平水韵部
+**核心（API 模式必装）**
 - `gradio` — Web UI
+- `openai` — 阿里百炼 / DeepSeek API（OpenAI 兼容）
+- `pypinyin` + `pingshui_rhyme` — 平仄标注与平水韵部
+- `Pillow`、`requests`
+
+**CLIP 评分（推荐安装）**
+- `torch` + `transformers` — CLIP 图文一致性评分
+
+**本地后端（可选）**
+- `unsloth` + `peft` + `bitsandbytes` — Qwen2.5 4-bit LoRA 加载
+- `diffusers` + `xformers` — Z-Image Turbo FP8 扩散模型
+
+未安装可选依赖时，相关本地选项会在 UI 中自动隐藏，应用照常运行。
 
 ## License
 

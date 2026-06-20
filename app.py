@@ -22,6 +22,7 @@ from core.logger import setup_logging
 from config import (
     DEEPSEEK_API_KEY, DASHSCOPE_API_KEY,
     POEM_CANDIDATE_COUNT, IMAGE_API_MODEL,
+    LOCAL_LLM_AVAILABLE, LOCAL_LORA_AVAILABLE, LOCAL_IMAGE_AVAILABLE,
 )
 
 # 初始化日志系统
@@ -213,18 +214,26 @@ def _poem_html(poem_text: str, title: str = "", placeholder: bool = False) -> st
 
 
 # ── Adapter 工厂 ──────────────────────────────────────────────────────────────
-def _make_adapter(model_choice: str) -> ModelAdapter:
+def _make_adapter(model_choice: str, *, allow_lora_fallback: bool = False) -> ModelAdapter:
+    """
+    构造 ModelAdapter。
+
+    `allow_lora_fallback`：只在调用方是「诗歌生成」时设 True。其它任务
+    （评分/起名/提示词等）需要结构化输出或英文，LoRA 给不了正确结果，
+    API 失败时静默走 LoRA 反而会让下游静默崩坏，所以默认禁止降级。
+    """
     if not model_choice:
-        model_choice = "deepseek-v4-flash"
+        model_choice = "qwen-plus"
+    kwargs = {"allow_lora_fallback": allow_lora_fallback}
     if model_choice == "local_base":
-        return ModelAdapter(backend="local",      api_key=None, api_model=None)
+        return ModelAdapter(backend="local",      api_key=None, api_model=None, **kwargs)
     elif model_choice == "local_lora":
-        return ModelAdapter(backend="local_lora", api_key=None, api_model=None)
+        return ModelAdapter(backend="local_lora", api_key=None, api_model=None, **kwargs)
     elif model_choice.startswith("deepseek"):
-        return ModelAdapter(backend="deepseek",   api_key=DEEPSEEK_API_KEY, api_model=model_choice)
+        return ModelAdapter(backend="deepseek",   api_key=DEEPSEEK_API_KEY, api_model=model_choice, **kwargs)
     elif model_choice.startswith("qwen"):
-        return ModelAdapter(backend="qwen",       api_key=DASHSCOPE_API_KEY, api_model=model_choice)
-    return ModelAdapter(backend="deepseek", api_key=DEEPSEEK_API_KEY, api_model="deepseek-v4-flash")
+        return ModelAdapter(backend="qwen",       api_key=DASHSCOPE_API_KEY, api_model=model_choice, **kwargs)
+    return ModelAdapter(backend="qwen", api_key=DASHSCOPE_API_KEY, api_model="qwen-plus", **kwargs)
 
 
 def _parse_image_backend(val: str):
@@ -256,7 +265,7 @@ def on_create(
     """
     style_suffix = get_style_suffix(style, lang)
 
-    generation_adapter = _make_adapter(poem_model_val)
+    generation_adapter = _make_adapter(poem_model_val, allow_lora_fallback=True)
     intent_adapter     = _make_adapter(intent_model_val)
     title_adapter      = _make_adapter(title_model_val)
     prompt_adapter     = _make_adapter(prompt_model_val)
@@ -371,7 +380,7 @@ def on_refine_poem(
         )
         return
 
-    generation_adapter = _make_adapter(poem_model_val)
+    generation_adapter = _make_adapter(poem_model_val, allow_lora_fallback=True)
     intent_adapter     = _make_adapter(intent_model_val)
     refine_adapter     = _make_adapter(refine_poem_model_val)
     prompt_adapter     = _make_adapter(prompt_model_val)
@@ -559,7 +568,7 @@ def on_autonomous_create(
     """
     style_suffix = get_style_suffix(style, lang)
 
-    generation_adapter = _make_adapter(poem_model_val)
+    generation_adapter = _make_adapter(poem_model_val, allow_lora_fallback=True)
     intent_adapter     = _make_adapter(intent_model_val)
     title_adapter      = _make_adapter(title_model_val)
     prompt_adapter     = _make_adapter(prompt_model_val)
@@ -842,9 +851,8 @@ footer { display:none !important; }
 #auto-desc p { font-size:0.78rem !important; color:var(--ink-faint) !important; line-height:1.6 !important; margin:4px 0 10px !important; }
 """
 
-MODEL_CHOICES = [
-    ("本地基础模型 (Qwen2.5-1.5B)", "local_base"),
-    ("本地微调模型 (Qwen2.5-1.5B+LoRA)", "local_lora"),
+# API 模型列表（始终可用）
+_API_MODEL_CHOICES = [
     ("DeepSeek-Chat", "deepseek-chat"),
     ("DeepSeek-V4-Flash", "deepseek-v4-flash"),
     ("DeepSeek-V4-Pro", "deepseek-v4-pro"),
@@ -857,12 +865,20 @@ MODEL_CHOICES = [
     ("Qwen2.5-1.5B API（非量化，对比 LoRA 用）", "qwen2.5-1.5b-instruct"),
 ]
 
-POEM_MODEL_CHOICES = [
-    ("本地微调模型 (Qwen2.5-1.5B+LoRA)", "local_lora"),
-] + MODEL_CHOICES[2:]  # 诗歌生成把 LoRA 放第一位
+# 本地选项仅在权重目录存在时注入（路径由 .env 中的 BASE_MODEL_PATH / LORA_PATH 控制）
+_LOCAL_BASE_CHOICE = [("本地基础模型 (Qwen2.5-1.5B)", "local_base")] if LOCAL_LLM_AVAILABLE else []
+_LOCAL_LORA_CHOICE = [("本地微调模型 (Qwen2.5-1.5B+LoRA)", "local_lora")] if LOCAL_LORA_AVAILABLE else []
+
+MODEL_CHOICES = _LOCAL_BASE_CHOICE + _LOCAL_LORA_CHOICE + _API_MODEL_CHOICES
+
+# 诗歌生成把 LoRA 放第一位；LoRA 不可用时回退到 API 列表
+POEM_MODEL_CHOICES = (_LOCAL_LORA_CHOICE + _API_MODEL_CHOICES) if LOCAL_LORA_AVAILABLE else _API_MODEL_CHOICES
 
 # 改诗专用：只允许 API 模型（LoRA 不具备改诗能力）
-REFINE_POEM_MODEL_CHOICES = MODEL_CHOICES[2:]   # 去掉两个本地 local 选项
+REFINE_POEM_MODEL_CHOICES = _API_MODEL_CHOICES
+
+# 默认模型：LoRA 可用时优先，否则用 qwen-plus
+_DEFAULT_POEM_MODEL = "local_lora" if LOCAL_LORA_AVAILABLE else "qwen-plus"
 
 # 图像编辑模型（百炼图像编辑 API）
 # 以下为已确认可用的模型 ID（2025 年百炼平台）：
@@ -877,8 +893,9 @@ IMAGE_EDIT_MODEL_CHOICES = [
     ("全量重生图（LLM 改写 Prompt，不保留构图）",            ""),
 ]
 
-IMAGE_BACKEND_CHOICES = [
-    ("本地 Z-Image（离线量化）",                        "local"),
+_LOCAL_IMAGE_CHOICE = [("本地 Z-Image（离线量化）", "local")] if LOCAL_IMAGE_AVAILABLE else []
+
+IMAGE_BACKEND_CHOICES = _LOCAL_IMAGE_CHOICE + [
     ("百炼 · wanx2.1-t2i-turbo（快速）",               "bailian:wanx2.1-t2i-turbo"),
     ("百炼 · wanx2.1-t2i-plus（高质量）",              "bailian:wanx2.1-t2i-plus"),
     ("百炼 · Z-Image Turbo API（非量化，推荐）",        "bailian:z-image-turbo"),
@@ -888,6 +905,9 @@ IMAGE_BACKEND_CHOICES = [
     ("百炼 · Qwen-Image 2.0 Pro",                      "bailian:qwen-image-2.0-pro"),
     ("百炼 · Qwen-Image 2.0 2026-03-03",               "bailian:qwen-image-2.0-2026-03-03"),
 ]
+
+# 默认图像后端：本地 Z-Image 可用时优先（生成快），否则用百炼 turbo
+_DEFAULT_IMAGE_BACKEND = "local" if LOCAL_IMAGE_AVAILABLE else "bailian:wanx2.1-t2i-turbo"
 
 # ── Gradio Blocks ─────────────────────────────────────────────────────────────
 with gr.Blocks(
@@ -963,7 +983,7 @@ with gr.Blocks(
                     label="意图评分模型", show_label=True,
                 )
                 poem_model = gr.Dropdown(
-                    choices=POEM_MODEL_CHOICES, value="local_lora",
+                    choices=POEM_MODEL_CHOICES, value=_DEFAULT_POEM_MODEL,
                     label="诗歌生成模型", show_label=True,
                 )
                 title_model = gr.Dropdown(
@@ -980,7 +1000,7 @@ with gr.Blocks(
             gr.HTML('<div class="sec">图 像 生 成 后 端</div>')
             image_backend = gr.Dropdown(
                 choices=IMAGE_BACKEND_CHOICES,
-                value="local",
+                value=_DEFAULT_IMAGE_BACKEND,
                 show_label=False,
                 interactive=True,
             )
@@ -1205,12 +1225,23 @@ with gr.Blocks(
 
 
 def main():
+    # 防止本机代理（Clash/v2ray 等）劫持 Gradio 启动自检请求 (gradio_api/startup-events)
+    # 出现 502 时多为代理转发到 127.0.0.1 失败，显式把 localhost 加入 NO_PROXY 即可
+    for key in ("NO_PROXY", "no_proxy"):
+        existing = os.environ.get(key, "")
+        if "127.0.0.1" not in existing or "localhost" not in existing:
+            parts = [p for p in (existing, "localhost", "127.0.0.1") if p]
+            os.environ[key] = ",".join(dict.fromkeys(parts))
+
     print("\n" + "=" * 60)
     print("诗画墨语 · Agent 模式启动")
     print(f"  候选诗数量: {POEM_CANDIDATE_COUNT}")
     print(f"  图像风格: 支持 {len(STYLE_MAP)} 种")
     print(f"  DeepSeek API Key: {'已设置' if DEEPSEEK_API_KEY else '未设置'}")
     print(f"  通义千问 API Key: {'已设置' if DASHSCOPE_API_KEY else '未设置'}")
+    print(f"  本地 LLM 基座:    {'可用' if LOCAL_LLM_AVAILABLE else '未启用（API 模式）'}")
+    print(f"  本地 LoRA Adapter: {'可用' if LOCAL_LORA_AVAILABLE else '未启用'}")
+    print(f"  本地 Z-Image:     {'可用' if LOCAL_IMAGE_AVAILABLE else '未启用（百炼 API 模式）'}")
     print("  Agent 特性:")
     print("    · 双锚点 CLIP（诗-图 × 0.6 + 提示词-图 × 0.4）")
     print("    · 改诗注入 / Agent 改图规划 / 模型追踪 / 报告含模型配置")

@@ -5,7 +5,7 @@ from PIL import Image
 from core.models.manager import ModelManager
 from config import (
     IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_STEPS, IMAGE_GUIDANCE, NEGATIVE_PROMPT,
-    DASHSCOPE_API_KEY, IMAGE_API_MODEL,
+    DASHSCOPE_API_KEY, IMAGE_API_MODEL, LOCAL_IMAGE_AVAILABLE,
 )
 from core.logger import get_logger
 
@@ -27,9 +27,17 @@ class ImageGenerator:
             try:
                 return self._generate_bailian(prompt, negative_prompt, api_key, api_model)
             except Exception as e:
-                _log.warning("百炼 API 生图失败: %s，降级到本地 Z-Image", e)
-                return self._generate_local(prompt, negative_prompt, guidance_scale)
+                if LOCAL_IMAGE_AVAILABLE:
+                    _log.warning("百炼 API 生图失败: %s，降级到本地 Z-Image", e)
+                    return self._generate_local(prompt, negative_prompt, guidance_scale)
+                _log.error("百炼 API 生图失败且本地 Z-Image 不可用（未配置 ZIMAGE_PATH）")
+                raise
         else:
+            if not LOCAL_IMAGE_AVAILABLE:
+                raise FileNotFoundError(
+                    "本地 Z-Image 不可用：未配置 ZIMAGE_PATH 或路径不存在。"
+                    "请在 UI「图像生成后端」中改选百炼 API 后端。"
+                )
             return self._generate_local(prompt, negative_prompt, guidance_scale)
 
     def _generate_local(

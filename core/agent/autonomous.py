@@ -145,7 +145,8 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
     # ═════════════════════════════════════════════════════════════════════
     # CLIP 门控：纯改图循环（不再触碰诗歌）
     # ═════════════════════════════════════════════════════════════════════
-    stale_count = 0  # 连续无提升计数器（自适应停止）
+    stale_count = 0       # 连续无提升计数器（自适应停止）
+    prev_round_score = None  # 上一轮分数，None 表示首轮（不计入 stale）
     for img_round in range(config.max_image_improve_rounds):
         if best_score >= target:
             state.log("自主模式", "改图循环·提前达标",
@@ -174,15 +175,18 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
             state.log("自主模式", "改图：图像生成失败，终止", "")
             break
 
-        prev_best = best_score
         if round_score > best_score:
             best_score = round_score
             best_state = agent._copy_state(state)
-        # 自适应停止：与上一轮的差值（提升幅度）比较 delta
-        if round_score - prev_best <= config.adaptive_stop_delta:
-            stale_count += 1
-        else:
-            stale_count = 0
+
+        # 自适应停止：仅在有"上一轮"可比较时累计 stale
+        # delta = 本轮相对上一轮的提升幅度 ≤ 阈值 → stale++
+        if prev_round_score is not None:
+            if round_score - prev_round_score <= config.adaptive_stop_delta:
+                stale_count += 1
+            else:
+                stale_count = 0
+        prev_round_score = round_score
 
         # 每轮改图结果都 yield 给前端（不管分数是否提升，用户都要看到图）
         yield state
@@ -190,7 +194,7 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
         # 自适应停止：连续 2 轮无显著提升
         if config.adaptive_stop and stale_count >= 2:
             state.log("自主模式", "自适应停止",
-                      f"连续 {stale_count} 轮 CLIP 无显著提升（delta < {config.adaptive_stop_delta}），提前退出改图循环")
+                      f"连续 {stale_count} 轮 CLIP 无显著提升（delta ≤ {config.adaptive_stop_delta}），提前退出改图循环")
             break
 
     # ═════════════════════════════════════════════════════════════════════

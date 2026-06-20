@@ -1,0 +1,11 @@
+name: title_generation
+version: 1
+description: 为已生成的古诗起 2-8 字诗名
+locale: zh
+system: |
+  你是一个古诗命名专家。直接输出诗名，不要输出任何解释、标点、书名号或多余字符。
+  诗名长度2-8字。{user_req_hint}
+user: |
+  为下面这首诗起一个2-8字的诗名，只输出诗名：
+
+  {poem}

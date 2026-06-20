@@ -38,6 +38,19 @@ class PoetryAgent:
         self._poem_gen = None
         self._prompt_gen = None
         self._image_gen = None
+        self._clip_eval = None
+        self._clip_init_failed = False
+        self._tool_registry = None
+
+    # ── Tool 抽象层 ─────────────────────────────────────────────────────────
+    @property
+    def tool_registry(self):
+        """懒加载 ToolRegistry。把每个 _phase_* 方法包装成可枚举的 Tool，
+        便于未来对接 Function Calling / MCP 或外部调度。"""
+        if self._tool_registry is None:
+            from core.agent.tools import build_default_registry
+            self._tool_registry = build_default_registry(self)
+        return self._tool_registry
 
     # ── 懒加载属性 ───────────────────────────────────────────────────────────
     @property
@@ -60,6 +73,23 @@ class PoetryAgent:
             from core.image.generator import ImageGenerator
             self._image_gen = ImageGenerator()
         return self._image_gen
+
+    def _get_clip_eval(self):
+        """单例懒加载 CLIPEvaluator。初始化失败后标记为不可用，避免反复重试。
+
+        返回 None 表示 CLIP 不可用（首次初始化失败、未启用、或模型缺失）。
+        """
+        if self._clip_eval is not None or self._clip_init_failed:
+            return self._clip_eval
+        try:
+            from core.evaluation.clip import CLIPEvaluator
+            self._clip_eval = CLIPEvaluator()
+            _log.info("[CLIP] 评估器初始化完成（单例）")
+        except Exception as e:
+            self._clip_init_failed = True
+            _log.exception("[CLIP] 评估器初始化失败，本次会话内将跳过 CLIP 评分")
+            self._clip_init_error = str(e)
+        return self._clip_eval
 
     # ═════════════════════════════════════════════════════════════════════════
     # 主运行入口
@@ -200,6 +230,7 @@ class PoetryAgent:
         except Exception as e:
             state.phase = Phase.ERROR
             state.error = str(e)
+            _log.exception("诗歌生成 [_phase_poem] 异常")
             state.log("诗歌生成", "异常", str(e))
         return state
 
@@ -248,6 +279,7 @@ class PoetryAgent:
             except Exception as e:
                 state.phase = Phase.ERROR
                 state.error = str(e)
+                _log.exception("诗歌生成 [arena 重试轮] 异常")
                 state.log("诗歌生成", "异常", str(e))
                 return state
 
@@ -262,10 +294,9 @@ class PoetryAgent:
                 state.error = "无合格候选诗"
                 return state
 
-        # Arena 选冠军
-        arena_input = qualified_pool if len(qualified_pool) >= 3 else qualified_pool
+        # Arena 选冠军（合格池 < 3 时 arena_from_gated 自动退化为 1-2 首对决）
         arena_result = self.poem_gen.scorer.arena_from_gated(
-            arena_input, state.user_input, self.score_adapter,
+            qualified_pool, state.user_input, self.score_adapter,
         )
 
         state.poem = arena_result["champion"]
@@ -287,20 +318,8 @@ class PoetryAgent:
         state.phase = Phase.KEYWORD_EXTRACT
         if not state.poem:
             return state
-        msg = [
-            {"role": "system",
-             "content": (
-                 "You are a Chinese classical poetry visual analyst. "
-                 "Extract 6-10 key visual elements (objects, scenes, colors, "
-                 "lighting, atmospheric mood) from the poem and translate them to English. "
-                 "Only include elements explicitly present in the poem; do not add people, animals, kites, boats, buildings, tools, or story props unless named. "
-                 "Treat ambiguous emotion/thought as mood, not as a new object. "
-                 "Output ONLY a comma-separated list of short English phrases. "
-                 "No explanations, no Chinese characters."
-             )},
-            {"role": "user",
-             "content": f"Extract visual keywords from:\n{state.poem}"},
-        ]
+        from core.prompts import render_messages
+        msg = render_messages("agent.keyword_extract", poem=state.poem)
         try:
             result = self.score_adapter.generate(msg, max_tokens=80, temperature=0.2)
             state.visual_keywords_en = result.strip().replace("\n", ", ")
@@ -314,19 +333,15 @@ class PoetryAgent:
     def _phase_title(self, state: AgentState) -> AgentState:
         state.phase = Phase.TITLE_GEN
         model_desc = self._adapter_desc(self.title_adapter)
+        from core.prompts import render_messages
         user_req_hint = (
             f"\n注意：题名不得与创作要求相矛盾（创作要求：{state.user_input[:60]}），"
             "尤其不能出现相反的季节、时段、情绪等词汇。" if state.user_input else ""
         )
-        msg = [
-            {"role": "system",
-             "content": (
-                 "你是一个古诗命名专家。直接输出诗名，不要输出任何解释、标点、书名号或多余字符。"
-                 f"诗名长度2-8字。{user_req_hint}"
-             )},
-            {"role": "user",
-             "content": f"为下面这首诗起一个2-8字的诗名，只输出诗名：\n\n{state.poem}"},
-        ]
+        msg = render_messages(
+            "agent.title_generation",
+            poem=state.poem, user_req_hint=user_req_hint,
+        )
         for attempt in range(2):
             try:
                 raw = self.title_adapter.generate(msg, max_tokens=20, temperature=0.5)
@@ -368,29 +383,15 @@ class PoetryAgent:
             return state
         adapter = self.prompt_adapter or self.score_adapter
         model_desc = self._adapter_desc(adapter)
-        msg = [
-            {
-                "role": "system",
-                "content": (
-                    "You are a strict prompt quality controller for poetry-to-image generation. "
-                    "The prompt may ONLY depict visual elements supported by the title, poem, and visual anchors. "
-                    "Remove any unsupported people, animals, tools, kites, boats, buildings, or narrative objects. "
-                    "Do not use planning brief as a visual source. "
-                    "If it is already faithful, return KEEP followed by one short reason. "
-                    "If it contains unsupported elements or needs improvement, return REWRITE: followed only by the improved English prompt."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"User request (context only, not a source for extra objects):\n{state.user_input}\n\n"
-                    f"Title:\n{state.title}\n\n"
-                    f"Poem:\n{state.poem}\n\n"
-                    f"Visual anchors:\n{state.visual_keywords_en}\n\n"
-                    f"Prompt:\n{state.prompt}"
-                ),
-            },
-        ]
+        from core.prompts import render_messages
+        msg = render_messages(
+            "agent.prompt_review",
+            user_input=state.user_input,
+            title=state.title,
+            poem=state.poem,
+            visual_keywords_en=state.visual_keywords_en,
+            prompt=state.prompt,
+        )
         try:
             review = adapter.generate(msg, max_tokens=520, temperature=0.25).strip()
             state.prompt_review = review[:500]
@@ -422,8 +423,9 @@ class PoetryAgent:
         if not CLIP_ENABLED or not state.visual_keywords_en or not state.prompt:
             return
         try:
-            from core.evaluation.clip import CLIPEvaluator
-            clip = CLIPEvaluator()
+            clip = self._get_clip_eval()
+            if clip is None:
+                return
             raw = clip.score_text_text(state.visual_keywords_en, state.prompt)
             norm = (raw + 1.0) / 2.0
             if raw < CLIP_PROMPT_ALIGN_THRESHOLD:
@@ -460,11 +462,10 @@ class PoetryAgent:
 
         clip_eval = None
         if CLIP_ENABLED:
-            try:
-                from core.evaluation.clip import CLIPEvaluator
-                clip_eval = CLIPEvaluator()
-            except Exception as e:
-                state.log("CLIP初始化", "失败（跳过评分）", str(e))
+            clip_eval = self._get_clip_eval()
+            if clip_eval is None and self._clip_init_failed:
+                state.log("CLIP初始化", "失败（跳过评分）",
+                          getattr(self, "_clip_init_error", "未知错误"))
 
         best_image = None
         best_score = -1.0
@@ -487,6 +488,8 @@ class PoetryAgent:
                     api_key=state.image_api_key, api_model=state.image_api_model,
                 )
             except Exception as e:
+                _log.exception("图像生成失败 (backend=%s, model=%s)",
+                               state.image_backend, state.image_api_model)
                 state.log("图像生成", "失败", str(e), is_retry=is_retry)
                 state.phase = Phase.ERROR
                 state.error = str(e)
@@ -561,8 +564,10 @@ class PoetryAgent:
             state.clip_msg = "✓ 编辑完成（CLIP 评分未启用或无图像）"
             return state
         try:
-            from core.evaluation.clip import CLIPEvaluator
-            clip_eval = CLIPEvaluator()
+            clip_eval = self._get_clip_eval()
+            if clip_eval is None:
+                state.clip_msg = "✓ 编辑完成（CLIP 评估器不可用）"
+                return state
             raw_b = clip_eval.score_raw_cosine(state.image, state.prompt)
             norm_b = (raw_b + 1.0) / 2.0
             if state.visual_keywords_en:
@@ -629,32 +634,14 @@ class PoetryAgent:
         expected_lines = len(orig_lines)
         expected_chars = len(orig_lines[0]) if orig_lines else 5
 
-        msg = [
-            {"role": "system",
-             "content": (
-                 f"你是一位精通中国古典诗词的创作专家。"
-                 f"根据下方的修改方向，对原诗进行艺术性打磨。\n"
-                 f"格律铁则：每句必须恰好 {expected_chars} 个汉字，"
-                 f"共 {expected_lines} 句，每句换行，不加任何标点或解释。\n"
-                 f"创作原则：\n"
-                 f"  · 修改方向可能是方向性诗评（指出不足处），请据此自由发挥\n"
-                 f"  · 只改需要改的句子，意境好的句子可以保留\n"
-                 f"  · 不要加入原诗、用户要求、修改方向都没有出现的具体人物、器物、动物或情节\n"
-                 f"  · 改后每行精确 {expected_chars} 字，切勿多一字或少一字\n"
-                 f"押韵铁则：\n"
-                 f"  · 尽量不要修改原诗的韵脚字（偶句末字），如必须修改，确保全诗偶句末字"
-                 f"仍属同一韵部（平水韵），新韵脚与其他韵脚必须严格押韵\n"
-                 f"  · 奇句末字（除首句可押可不押外）必须用仄声且不得与韵脚同韵\n"
-                 f"平仄铁则：修改后的诗句必须继续保持平仄合规，不得出现出律"
-             )},
-            {"role": "user",
-             "content": (
-                 f"原诗（每行 {expected_chars} 字，共 {expected_lines} 行）：\n{old_poem}\n\n"
-                 f"修改方向：{feedback}\n\n"
-                 f"请根据以上方向，用古典诗词的美学标准打磨这首诗，"
-                 f"输出修改后的完整诗句（每行一句，{expected_chars} 个汉字，纯汉字）："
-             )},
-        ]
+        from core.prompts import render_messages
+        msg = render_messages(
+            "agent.refine_poem",
+            expected_chars=expected_chars,
+            expected_lines=expected_lines,
+            old_poem=old_poem,
+            feedback=feedback,
+        )
         try:
             raw = adapter.generate(msg, max_tokens=120, temperature=0.75)
             lines = [l.strip() for l in raw.split("\n") if l.strip()]
@@ -778,7 +765,7 @@ class PoetryAgent:
                 else:
                     _log.info("批量改诗 [%d/%d] - 未变化，保留原诗", i + 1, len(candidates))
             except Exception as e:
-                _log.error("批量改诗 [%d/%d] ✗ 异常: %s", i + 1, len(candidates), e)
+                _log.exception("批量改诗 [%d/%d] ✗ 异常", i + 1, len(candidates))
 
             # 恢复 state
             state.poem            = saved_poem
@@ -1114,9 +1101,15 @@ class PoetryAgent:
                 state.log("图像编辑", f"百炼指令编辑({edit_model})", f"指令: {feedback[:60]}")
                 return self._phase_clip_only(state)
             except Exception as e:
-                state.log("图像编辑", "编辑 API 失败，回退全量重生图", str(e))
+                _log.exception("[图像编辑] 编辑 API 失败")
+                state.log("图像编辑", "⚠ 编辑 API 失败，自动降级",
+                          f"原因: {e}\n"
+                          f"已用改写后的 Prompt（融入「{feedback[:40]}…」）重新生图。"
+                          f"如对结果不满意可手动点「改写重生图」。")
         elif edit_model and not _edit_key:
-            state.log("图像编辑", "⚠ 跳过编辑 API", "DASHSCOPE_API_KEY 未配置，回退全量重生图")
+            state.log("图像编辑", "⚠ 跳过编辑 API（无 API Key）",
+                      "DASHSCOPE_API_KEY 未配置，已自动降级为「改写重生图」"
+                      "（编辑意见已融入 Prompt）。")
         return self._phase_image_clip(state)
 
     def autonomous_improve_image(
@@ -1323,15 +1316,21 @@ class PoetryAgent:
     def _clip_anchor_weights(keywords_en: str) -> tuple:
         """根据视觉关键词丰富度返回 (诗锚点权重, 提示词锚点权重)。
 
-        关键词稀疏（<4 个英文单词，哲理/抽象诗常见）→ 降诗锚权重避坑。
+        关键词稀疏（<阈值词，哲理/抽象诗常见）→ 降诗锚权重避坑。
         """
+        from config import (
+            CLIP_POEM_WEIGHT, CLIP_PROMPT_WEIGHT,
+            CLIP_SPARSE_POEM_WEIGHT, CLIP_SPARSE_PROMPT_WEIGHT,
+            CLIP_SPARSE_WORD_THRESHOLD,
+        )
         if not keywords_en:
             return 0.0, 1.0
         word_count = len([w for w in keywords_en.replace(",", " ").split() if len(w) > 1])
-        if word_count < 4:
-            _log.info("[CLIP锚点] 视觉关键词稀疏（%d 词），切换至提示词锚点主导（0.3/0.7）", word_count)
-            return 0.3, 0.7
-        return 0.6, 0.4
+        if word_count < CLIP_SPARSE_WORD_THRESHOLD:
+            _log.info("[CLIP锚点] 视觉关键词稀疏（%d 词），切换至提示词锚点主导（%.1f/%.1f）",
+                      word_count, CLIP_SPARSE_POEM_WEIGHT, CLIP_SPARSE_PROMPT_WEIGHT)
+            return CLIP_SPARSE_POEM_WEIGHT, CLIP_SPARSE_PROMPT_WEIGHT
+        return CLIP_POEM_WEIGHT, CLIP_PROMPT_WEIGHT
 
     @staticmethod
     def _raw_clip(state: AgentState) -> float:

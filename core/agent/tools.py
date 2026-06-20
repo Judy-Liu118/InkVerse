@@ -1,13 +1,24 @@
 """
-core.agent.tools -- 工具抽象层
+core.agent.tools -- Agent 工具抽象层
 
-将每个创作步骤封装为独立 Tool，支持 ToolRegistry 注册与调度。
+设计目标：
+  1. 把 PoetryAgent 内部的 _phase_* 方法以 **Tool** 的形式对外暴露，
+     提供统一的可枚举、可 introspection 的接口；
+  2. 不重复业务实现 —— Tool 是 PoetryAgent 上对应方法的 **轻量 facade**；
+  3. 每个 Tool 自带 OpenAI Function Calling 风格的 JSON Schema 参数描述，
+     未来对接 Function Calling / MCP / 远端 Agent 时无需再改业务代码；
+  4. ToolRegistry 统一注册/查找，便于上层做 Plan-and-Execute、并行调度等扩展。
 """
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
+
 from core.logger import get_logger
+
+if TYPE_CHECKING:
+    from core.agent.agent import PoetryAgent
+    from core.agent.state import AgentState
 
 _log = get_logger(__name__)
 
@@ -16,294 +27,241 @@ _log = get_logger(__name__)
 # Tool 基类
 # ═══════════════════════════════════════════════════════════════════════════════
 class AgentTool(ABC):
-    """工具基类。每个工具负责一个独立的创作步骤。"""
+    """工具基类。子类需声明 name / description / parameters，并实现 execute()。"""
 
     name: str = ""
     description: str = ""
+    # JSON Schema 风格的参数描述，对齐 OpenAI Function Calling 规范
+    parameters: Dict[str, Any] = {"type": "object", "properties": {}, "required": []}
 
     @abstractmethod
     def execute(self, state: "AgentState", **kwargs) -> "AgentState":
         """执行工具逻辑，返回更新后的 AgentState。"""
-        ...
+
+    # ── 对接 Function Calling 的统一 schema ────────────────────────────────
+    def to_function_schema(self) -> Dict[str, Any]:
+        """返回 OpenAI Function Calling 风格的 schema，便于未来对接 LLM tools API。"""
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": self.parameters,
+            },
+        }
 
     def __repr__(self) -> str:
         return f"Tool({self.name})"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 工具注册表
+# ToolRegistry
 # ═══════════════════════════════════════════════════════════════════════════════
 class ToolRegistry:
-    """工具注册表，管理所有可用工具及其调度。"""
+    """工具注册表：注册、查找、列表，并可一次性导出全部 function schemas。"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._tools: Dict[str, AgentTool] = {}
 
-    def register(self, tool: AgentTool) -> None:
+    def register(self, tool: AgentTool) -> "ToolRegistry":
+        if not tool.name:
+            raise ValueError(f"Tool {tool!r} 缺少 name 字段")
         if tool.name in self._tools:
             _log.warning("工具 %s 已注册，将被覆盖", tool.name)
         self._tools[tool.name] = tool
-        _log.debug("注册工具: %s — %s", tool.name, tool.description)
+        return self
 
     def get(self, name: str) -> Optional[AgentTool]:
         return self._tools.get(name)
 
-    def list_tools(self) -> List[Dict[str, str]]:
-        return [{"name": t.name, "description": t.description} for t in self._tools.values()]
+    def __contains__(self, name: str) -> bool:
+        return name in self._tools
+
+    def __iter__(self):
+        return iter(self._tools.values())
+
+    def __len__(self) -> int:
+        return len(self._tools)
 
     @property
-    def tool_names(self) -> List[str]:
+    def names(self) -> List[str]:
         return list(self._tools.keys())
 
+    def list(self) -> List[Dict[str, str]]:
+        return [{"name": t.name, "description": t.description} for t in self._tools.values()]
+
+    def to_function_schemas(self) -> List[Dict[str, Any]]:
+        """导出全部工具的 OpenAI Function Calling schema。"""
+        return [t.to_function_schema() for t in self._tools.values()]
+
+    def execute(self, name: str, state: "AgentState", **kwargs) -> "AgentState":
+        """按名调度。未注册的工具名会抛 KeyError，便于上层捕获。"""
+        tool = self.get(name)
+        if tool is None:
+            raise KeyError(f"未注册的工具: {name!r}（可用：{self.names}）")
+        _log.debug("[ToolRegistry] 调度工具 %s", name)
+        return tool.execute(state, **kwargs)
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 具体工具实现
+# 业务工具：作为 PoetryAgent._phase_* 的轻量 facade
 # ═══════════════════════════════════════════════════════════════════════════════
+class _AgentBoundTool(AgentTool):
+    """绑定到具体 PoetryAgent 实例的工具基类。"""
 
-class GeneratePoemTool(AgentTool):
+    def __init__(self, agent: "PoetryAgent") -> None:
+        self.agent = agent
+
+
+class PlanTool(_AgentBoundTool):
+    name = "plan"
+    description = "解析用户创作要求，生成结构化任务计划与创作 brief"
+    parameters = {"type": "object", "properties": {}, "required": []}
+
+    def execute(self, state, **kwargs):
+        return self.agent._phase_plan(state)
+
+
+class GeneratePoemTool(_AgentBoundTool):
     name = "generate_poem"
-    description = "根据用户要求生成诗歌候选，多维度评分后选出最优"
+    description = "生成候选诗歌，经多维度评分（意图/平仄/押韵/意象/聚合/重复）后选出最优"
+    parameters = {"type": "object", "properties": {}, "required": []}
 
-    def __init__(self, generation_adapter=None, score_adapter=None):
-        self.generation_adapter = generation_adapter
-        self.score_adapter = score_adapter
-
-    def execute(self, state, **kwargs) -> "AgentState":
-        from core.poem.generator import PoemGenerator
-        gen = PoemGenerator()
-        # LoRA 模型忽略 brief（避免干扰）；API 模型利用规划阶段生成的 brief 提升质量
-        use_lora = getattr(self.generation_adapter, "backend", "") == "local_lora"
-        brief = "" if use_lora else (getattr(state, "creative_brief", "") or "")
-        result = gen.generate(
-            state.user_input, self.score_adapter, self.generation_adapter,
-            creative_brief=brief,
-        )
-        if len(result) == 4:
-            genre_name, poem, best_score, art_quality = result
-        elif len(result) == 3:
-            genre_name, poem, best_score = result
-            art_quality = best_score
-        else:
-            genre_name, poem = result
-            best_score = art_quality = 0.0
-
-        state.poem = poem
-        state.best_poem_score = best_score
-        state.best_poem_art_quality = art_quality
-        from core.agent.state import Phase
-        if "生成失败" in poem:
-            state.phase = Phase.ERROR
-            state.error = poem
-        return state
+    def execute(self, state, **kwargs):
+        return self.agent._phase_poem(state)
 
 
-class ExtractKeywordsTool(AgentTool):
-    name = "extract_keywords"
-    description = "从诗歌提取英文视觉关键词，作为 CLIP 诗歌锚点"
+class ExtractKeywordsTool(_AgentBoundTool):
+    name = "extract_visual_keywords"
+    description = "从诗歌抽取英文视觉关键词，作为 CLIP 双锚点中的「诗-图」锚点"
+    parameters = {"type": "object", "properties": {}, "required": []}
 
-    def __init__(self, score_adapter=None):
-        self.score_adapter = score_adapter
-
-    def execute(self, state, **kwargs) -> "AgentState":
-        if not state.poem:
-            return state
-        msg = [
-            {"role": "system",
-             "content": (
-                 "You are a Chinese classical poetry visual analyst. "
-                 "Extract 6-10 key visual elements (objects, scenes, colors, "
-                 "lighting, atmospheric mood) from the poem and translate them to English. "
-                 "Only include elements explicitly present in the poem; do not add people, animals, kites, boats, buildings, tools, or story props unless named. "
-                 "Treat ambiguous emotion/thought as mood, not as a new object. "
-                 "Output ONLY a comma-separated list of short English phrases. "
-                 "No explanations, no Chinese characters."
-             )},
-            {"role": "user",
-             "content": f"Extract visual keywords from:\n{state.poem}"},
-        ]
-        try:
-            result = self.score_adapter.generate(msg, max_tokens=80, temperature=0.2)
-            state.visual_keywords_en = result.strip().replace("\n", ", ")
-        except Exception as e:
-            _log.warning("关键词提取失败: %s", e)
-            state.visual_keywords_en = ""
-        return state
+    def execute(self, state, **kwargs):
+        return self.agent._phase_keyword_extract(state)
 
 
-class GenerateTitleTool(AgentTool):
+class GenerateTitleTool(_AgentBoundTool):
     name = "generate_title"
-    description = "为诗歌生成2-8字的古典诗名"
+    description = "为诗歌生成 2-8 字的古典诗名"
+    parameters = {"type": "object", "properties": {}, "required": []}
 
-    def __init__(self, title_adapter=None):
-        self.title_adapter = title_adapter
-
-    def execute(self, state, **kwargs) -> "AgentState":
-        import re
-        user_req_hint = (
-            f"\n注意：题名不得与创作要求相矛盾（创作要求：{state.user_input[:60]}），"
-            "尤其不能出现相反的季节、时段、情绪等词汇。" if state.user_input else ""
-        )
-        msg = [
-            {"role": "system",
-             "content": (
-                 "你是一个古诗命名专家。直接输出诗名，不要输出任何解释、标点、书名号或多余字符。"
-                 f"诗名长度2-8字。{user_req_hint}"
-             )},
-            {"role": "user",
-             "content": f"为下面这首诗起一个2-8字的诗名，只输出诗名：\n\n{state.poem}"},
-        ]
-        for attempt in range(2):
-            try:
-                raw = self.title_adapter.generate(msg, max_tokens=20, temperature=0.5)
-                m = re.search(r"[一-鿿]{2,8}", raw.strip())
-                title = m.group() if m else ""
-                if title and 2 <= len(title) <= 8:
-                    state.title = title
-                    return state
-            except Exception as e:
-                _log.warning("诗名生成尝试 %d 异常: %s", attempt + 1, e)
-        pure = "".join(ch for ch in state.poem.split("\n")[0] if "一" <= ch <= "鿿")
-        state.title = pure[:4] or "无题"
-        return state
+    def execute(self, state, **kwargs):
+        return self.agent._phase_title(state)
 
 
-class GeneratePromptTool(AgentTool):
-    name = "generate_prompt"
-    description = "为诗歌生成结构化的绘画提示词"
+class GeneratePromptTool(_AgentBoundTool):
+    name = "generate_image_prompt"
+    description = "将诗歌翻译为面向扩散模型的英文绘画提示词，并附加风格后缀"
+    parameters = {"type": "object", "properties": {}, "required": []}
 
-    def __init__(self, prompt_adapter=None):
-        self.prompt_adapter = prompt_adapter
-
-    def execute(self, state, **kwargs) -> "AgentState":
-        from core.image.prompt import PromptGenerator
-        gen = PromptGenerator()
-        prompt_text = gen.generate(state.poem, state.lang, self.prompt_adapter)
-        if prompt_text is None:
-            from core.agent.state import Phase
-            state.phase = Phase.ERROR
-            state.error = "提示词生成失败"
-            return state
-        if state.style_suffix:
-            prompt_text = f"{state.style_suffix}\n{prompt_text}"
-        state.prompt = prompt_text
-        return state
+    def execute(self, state, **kwargs):
+        return self.agent._phase_prompt(state)
 
 
-class ReviewPromptTool(AgentTool):
-    name = "review_prompt"
-    description = "自检提示词质量，必要时自动改写"
+class ReviewPromptTool(_AgentBoundTool):
+    name = "review_image_prompt"
+    description = "自检提示词是否带入未授权意象（人物/动物/道具），必要时自动改写"
+    parameters = {"type": "object", "properties": {}, "required": []}
 
-    def __init__(self, prompt_adapter=None):
-        self.prompt_adapter = prompt_adapter
-
-    def execute(self, state, **kwargs) -> "AgentState":
-        if not state.prompt:
-            return state
-        import re
-        adapter = self.prompt_adapter
-        msg = [
-            {
-                "role": "system",
-                "content": (
-                    "You are a strict prompt quality controller for poetry-to-image generation. "
-                    "The prompt may ONLY depict visual elements supported by the title, poem, and visual anchors. "
-                    "Remove any unsupported people, animals, tools, kites, boats, buildings, or narrative objects. "
-                    "Do not use planning brief as a visual source. "
-                    "If it is already faithful, return KEEP followed by one short reason. "
-                    "If it contains unsupported elements or needs improvement, return REWRITE: followed only by the improved English prompt."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"User request (context only, not a source for extra objects):\n{state.user_input}\n\n"
-                    f"Title:\n{state.title}\n\n"
-                    f"Poem:\n{state.poem}\n\n"
-                    f"Visual anchors:\n{state.visual_keywords_en}\n\n"
-                    f"Prompt:\n{state.prompt}"
-                ),
-            },
-        ]
-        try:
-            review = adapter.generate(msg, max_tokens=520, temperature=0.25).strip()
-            state.prompt_review = review[:500]
-            if review.lower().startswith("rewrite"):
-                rewritten = re.sub(r"^rewrite\s*[:：]\s*", "", review, flags=re.I).strip()
-                rewritten = rewritten.strip().strip("`")
-                rewritten = re.sub(r"^```[a-zA-Z]*\s*", "", rewritten)
-                rewritten = re.sub(r"\s*```$", "", rewritten)
-                rewritten = re.sub(r"^(revised image prompt|prompt)\s*[:：]\s*", "", rewritten, flags=re.I)
-                kept = []
-                for line in rewritten.splitlines():
-                    if re.match(r"\s*(forbidden|negative prompt|禁加元素|负面提示词)\s*[:：]", line, flags=re.I):
-                        continue
-                    kept.append(line)
-                rewritten = "\n".join(kept).strip()
-                if len(rewritten) >= 30:
-                    state.prompt = rewritten
-        except Exception as e:
-            _log.warning("提示词自检异常: %s", e)
-        return state
+    def execute(self, state, **kwargs):
+        return self.agent._phase_prompt_review(state)
 
 
-class GenerateImageTool(AgentTool):
+class GenerateImageTool(_AgentBoundTool):
     name = "generate_image"
-    description = "根据提示词生成图像（支持本地 Z-Image 和百炼 API 双后端）"
+    description = "根据提示词生成图像，并在 CLIP 双锚点评分下做最多 N 次重试"
+    parameters = {
+        "type": "object",
+        "properties": {},
+        "required": [],
+    }
 
-    def execute(self, state, **kwargs) -> "AgentState":
-        from core.image.generator import ImageGenerator
-        gen = ImageGenerator()
-        image = gen.generate(
-            prompt=state.prompt, backend=state.image_backend,
-            api_key=state.image_api_key, api_model=state.image_api_model,
-        )
-        state.image = image
-        model_name = state.image_api_model or f"local-Z-Image"
-        state.model_usage.image_gen = f"{state.image_backend}/{model_name}"
-        return state
+    def execute(self, state, **kwargs):
+        return self.agent._phase_image_clip(state)
 
 
-class EvaluateCLIPTool(AgentTool):
-    name = "evaluate_clip"
-    description = "用 CLIP 双锚点评分评估图文一致性"
-
-    def execute(self, state, **kwargs) -> "AgentState":
-        from config import CLIP_ENABLED, CLIP_POEM_WEIGHT, CLIP_PROMPT_WEIGHT
-        if not CLIP_ENABLED or state.image is None:
-            return state
-        from core.evaluation.clip import CLIPEvaluator
-        clip_eval = CLIPEvaluator()
-        raw_b = clip_eval.score_raw_cosine(state.image, state.prompt)
-        norm_b = (raw_b + 1.0) / 2.0
-        if state.visual_keywords_en:
-            raw_a = clip_eval.score_raw_cosine(state.image, state.visual_keywords_en)
-            norm_a = (raw_a + 1.0) / 2.0
-        else:
-            raw_a = norm_a = 0.0
-        state.clip_score_poem = norm_a
-        state.clip_score_prompt = norm_b
-        state.clip_score_final = CLIP_POEM_WEIGHT * norm_a + CLIP_PROMPT_WEIGHT * norm_b if state.visual_keywords_en else norm_b
-        return state
-
-
-class ReflectTool(AgentTool):
+class ReflectTool(_AgentBoundTool):
     name = "reflect"
-    description = "生成结果反思，评估生成质量并给出优化建议"
+    description = "根据 CLIP 双锚点综合分给出验收结论，指导后续是否需要改图/改诗"
+    parameters = {"type": "object", "properties": {}, "required": []}
 
-    def execute(self, state, **kwargs) -> "AgentState":
-        raw_final = state.clip_score_final * 2 - 1 if state.clip_score_final else 0.0
-        if raw_final >= 0.28:
-            verdict = "接受当前结果：图像与诗歌意象、提示词执行均较一致。"
-        elif raw_final >= 0.22:
-            verdict = "接受当前结果但建议微调：主体和氛围基本匹配，可继续优化细节。"
-        elif state.image is not None:
-            verdict = "保留最优结果：评分偏低，建议改图增强主体、季节、光线或空间关系。"
-        else:
-            verdict = "没有可用图像结果，需要检查图像后端或提示词。"
-        state.final_reflection = (
-            f"{verdict}\n"
-            f"诗歌锚点分: {state.clip_score_poem:.3f}；"
-            f"提示词锚点分: {state.clip_score_prompt:.3f}；"
-            f"综合分: {state.clip_score_final:.3f}。"
+    def execute(self, state, **kwargs):
+        return self.agent._phase_reflect(state)
+
+
+class RefinePoemTool(_AgentBoundTool):
+    name = "refine_poem"
+    description = "根据反馈或方向性诗评对当前诗作进行格律安全的改写"
+    parameters = {
+        "type": "object",
+        "properties": {
+            "feedback": {
+                "type": "string",
+                "description": "用户反馈或自动生成的方向性诗评",
+            },
+        },
+        "required": ["feedback"],
+    }
+
+    def execute(self, state, feedback: str = "", **kwargs):
+        return self.agent.refine_poem(state, feedback=feedback)
+
+
+class EditImageTool(_AgentBoundTool):
+    name = "edit_image"
+    description = "基于反馈改写绘画提示词并重新生图（或调用百炼图像编辑 API 保留构图）"
+    parameters = {
+        "type": "object",
+        "properties": {
+            "feedback": {"type": "string", "description": "改图意见"},
+            "edit_model": {
+                "type": "string",
+                "description": "百炼图像编辑模型名，留空则走改写重生图路径",
+            },
+        },
+        "required": ["feedback"],
+    }
+
+    def execute(self, state, feedback: str = "", edit_model: Optional[str] = None, **kwargs):
+        return self.agent.edit_image_by_feedback(
+            state, feedback=feedback, edit_model=edit_model,
         )
-        return state
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 工厂方法
+# ═══════════════════════════════════════════════════════════════════════════════
+def build_default_registry(agent: "PoetryAgent") -> ToolRegistry:
+    """构造 InkVerse 默认工具集，按创作流水线的逻辑顺序注册。"""
+    registry = ToolRegistry()
+    for tool_cls in (
+        PlanTool,
+        GeneratePoemTool,
+        ExtractKeywordsTool,
+        GenerateTitleTool,
+        GeneratePromptTool,
+        ReviewPromptTool,
+        GenerateImageTool,
+        ReflectTool,
+        RefinePoemTool,
+        EditImageTool,
+    ):
+        registry.register(tool_cls(agent))
+    return registry
+
+
+__all__ = [
+    "AgentTool",
+    "ToolRegistry",
+    "build_default_registry",
+    "PlanTool",
+    "GeneratePoemTool",
+    "ExtractKeywordsTool",
+    "GenerateTitleTool",
+    "GeneratePromptTool",
+    "ReviewPromptTool",
+    "GenerateImageTool",
+    "ReflectTool",
+    "RefinePoemTool",
+    "EditImageTool",
+]

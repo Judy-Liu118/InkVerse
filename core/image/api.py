@@ -9,6 +9,11 @@ import requests
 from PIL import Image
 from typing import Optional
 from core.logger import get_logger
+from config import (
+    API_TIMEOUT_SUBMIT, API_TIMEOUT_SYNC, API_TIMEOUT_POLL,
+    API_TIMEOUT_DOWNLOAD, API_MAX_RETRIES,
+    API_POLL_INTERVAL, API_POLL_MAX_WAIT,
+)
 
 _log = get_logger(__name__)
 
@@ -16,8 +21,47 @@ _SYNTHESIS_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image
 _MULTIMODAL_GENERATION_URL = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
 _TASK_QUERY_URL = "https://dashscope.aliyuncs.com/api/v1/tasks/{task_id}"
 
-_POLL_INTERVAL = 3
-_POLL_MAX_WAIT = 120
+_POLL_INTERVAL = API_POLL_INTERVAL
+_POLL_MAX_WAIT = API_POLL_MAX_WAIT
+
+
+_RETRIABLE_EXC = (
+    requests.exceptions.ConnectionError,
+    requests.exceptions.Timeout,
+    requests.exceptions.ChunkedEncodingError,
+)
+
+
+def _request_with_retry(method: str, url: str, *, op: str, **kwargs):
+    """对连接/超时类错误做指数退避（1s, 2s, 4s …）。
+
+    HTTP 4xx/5xx 不重试 —— 由调用方走 raise_for_status 让上层判断。
+    400 状态码也不在此处特殊处理，调用方需要 fallback 的会自行处理 resp。
+    """
+    last_exc = None
+    for attempt in range(API_MAX_RETRIES):
+        try:
+            return requests.request(method, url, **kwargs)
+        except _RETRIABLE_EXC as e:
+            last_exc = e
+            if attempt == API_MAX_RETRIES - 1:
+                break
+            wait = 2 ** attempt
+            _log.warning("[API %s] %s 第 %d/%d 次失败 (%s)，%ds 后重试",
+                         op, method.upper(), attempt + 1, API_MAX_RETRIES,
+                         type(e).__name__, wait)
+            time.sleep(wait)
+    _log.error("[API %s] %s 重试 %d 次后仍失败: %s",
+               op, method.upper(), API_MAX_RETRIES, last_exc)
+    raise last_exc
+
+
+def _post(url, *, op, **kwargs):
+    return _request_with_retry("POST", url, op=op, **kwargs)
+
+
+def _get(url, *, op, **kwargs):
+    return _request_with_retry("GET", url, op=op, **kwargs)
 
 
 class BailianImageAPI:
@@ -51,7 +95,8 @@ class BailianImageAPI:
             "parameters": {"size": size, "watermark": False},
         }
         _log.info("调用 Z-Image 同步接口 (%s, %s)", self.model, size)
-        resp = requests.post(_MULTIMODAL_GENERATION_URL, json=payload, headers=headers, timeout=120)
+        resp = _post(_MULTIMODAL_GENERATION_URL, op="z-image",
+                     json=payload, headers=headers, timeout=API_TIMEOUT_SYNC)
         resp.raise_for_status()
         data = resp.json()
         img_url = self._extract_image_url(data)
@@ -68,7 +113,8 @@ class BailianImageAPI:
             "parameters": {"size": size, "watermark": False},
         }
         _log.info("调用 Qwen-Image 同步接口 (%s, %s)", self.model, size)
-        resp = requests.post(_MULTIMODAL_GENERATION_URL, json=payload, headers=headers, timeout=180)
+        resp = _post(_MULTIMODAL_GENERATION_URL, op="qwen-image",
+                     json=payload, headers=headers, timeout=API_TIMEOUT_SYNC)
         resp.raise_for_status()
         data = resp.json()
         img_url = self._extract_image_url(data)
@@ -83,7 +129,8 @@ class BailianImageAPI:
         if negative_prompt:
             payload["input"]["negative_prompt"] = negative_prompt
         _log.debug("提交生图任务 (%s, %s)", self.model, size)
-        resp = requests.post(_SYNTHESIS_URL, json=payload, headers=headers, timeout=30)
+        resp = _post(_SYNTHESIS_URL, op="submit-t2i",
+                     json=payload, headers=headers, timeout=API_TIMEOUT_SUBMIT)
         resp.raise_for_status()
         data = resp.json()
         task_id = data.get("output", {}).get("task_id")
@@ -99,7 +146,12 @@ class BailianImageAPI:
         while waited < _POLL_MAX_WAIT:
             time.sleep(_POLL_INTERVAL)
             waited += _POLL_INTERVAL
-            data = requests.get(url, headers=headers, timeout=15).json()
+            try:
+                resp = _get(url, op="poll-t2i", headers=headers, timeout=API_TIMEOUT_POLL)
+                data = resp.json()
+            except _RETRIABLE_EXC as e:
+                _log.warning("[轮询] task=%s 单次失败 (%s)，继续等待", task_id, type(e).__name__)
+                continue
             status = data.get("output", {}).get("task_status", "UNKNOWN")
             if status == "SUCCEEDED":
                 results = data["output"].get("results", [])
@@ -124,7 +176,7 @@ class BailianImageAPI:
             image = Image.open(io.BytesIO(base64.b64decode(encoded))).convert("RGB")
             _log.debug("图像解码完成，尺寸=%s", image.size)
             return image
-        resp = requests.get(url, timeout=60)
+        resp = _get(url, op="download", timeout=API_TIMEOUT_DOWNLOAD)
         resp.raise_for_status()
         image = Image.open(io.BytesIO(resp.content)).convert("RGB")
         _log.debug("图像下载完成，尺寸=%s", image.size)
@@ -214,7 +266,8 @@ class BailianImageEditAPI:
             "parameters": {"watermark": False},
         }
         _log.info("调用 Qwen 图像编辑同步接口 (%s)", self.model)
-        resp = requests.post(_MULTIMODAL_GENERATION_URL, json=payload, headers=headers, timeout=180)
+        resp = _post(_MULTIMODAL_GENERATION_URL, op="qwen-edit",
+                     json=payload, headers=headers, timeout=API_TIMEOUT_SYNC)
         resp.raise_for_status()
         data = resp.json()
         img_url = BailianImageAPI._extract_image_url(data)
@@ -241,15 +294,17 @@ class BailianImageEditAPI:
             "parameters": {"strength": round(strength, 2), "n": 1},
         }
         _log.debug("提交编辑任务 (%s)，指令: %s", self.model, instruction[:60])
-        resp = requests.post(_EDIT_URL, json=payload, headers=headers, timeout=30)
+        resp = _post(_EDIT_URL, op="submit-edit",
+                     json=payload, headers=headers, timeout=API_TIMEOUT_SUBMIT)
         if resp.status_code == 400:
             legacy_payload = {
                 "model": self.model,
                 "input": {"image": img_b64, "prompt": instruction},
                 "parameters": {"strength": round(strength, 2), "n": 1},
             }
-            _log.debug("modern payload 被拒绝，尝试 legacy image 字段…")
-            resp = requests.post(_EDIT_URL, json=legacy_payload, headers=headers, timeout=30)
+            _log.warning("[编辑] modern payload 被拒绝（400），尝试 legacy image 字段")
+            resp = _post(_EDIT_URL, op="submit-edit-legacy",
+                         json=legacy_payload, headers=headers, timeout=API_TIMEOUT_SUBMIT)
         resp.raise_for_status()
         data = resp.json()
         task_id = data.get("output", {}).get("task_id")
@@ -265,7 +320,12 @@ class BailianImageEditAPI:
         while waited < _EDIT_POLL_MAX_WAIT:
             time.sleep(_EDIT_POLL_INTERVAL)
             waited += _EDIT_POLL_INTERVAL
-            data = requests.get(url, headers=headers, timeout=15).json()
+            try:
+                resp = _get(url, op="poll-edit", headers=headers, timeout=API_TIMEOUT_POLL)
+                data = resp.json()
+            except _RETRIABLE_EXC as e:
+                _log.warning("[轮询·编辑] task=%s 单次失败 (%s)，继续等待", task_id, type(e).__name__)
+                continue
             status = data.get("output", {}).get("task_status", "UNKNOWN")
             if status == "SUCCEEDED":
                 results = data["output"].get("results", [])
@@ -283,8 +343,7 @@ class BailianImageEditAPI:
 
     @staticmethod
     def _download_image(url: str) -> Image.Image:
-        import requests as _req
-        resp = _req.get(url, timeout=60)
+        resp = _get(url, op="download-edit", timeout=API_TIMEOUT_DOWNLOAD)
         resp.raise_for_status()
         image = Image.open(io.BytesIO(resp.content)).convert("RGB")
         _log.debug("下载完成，尺寸=%s", image.size)
