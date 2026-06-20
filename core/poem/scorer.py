@@ -1131,7 +1131,7 @@ C. 明显缺失的要素（若无请写"无"）："""
             _log.info("  诗%d vs 诗%d → %s 胜", a["idx"] + 1, b["idx"] + 1,
                       "A" if winner == "A" else "B")
 
-        # 6. 综合分 = 本地 * 0.85 + arena * 0.15
+        # 6. 综合分 = 本地 * ARENA_LOCAL_WT(0.75) + arena * ARENA_PAIRWISE_WT(0.25)
         for t in gated[:top_n]:
             wins = arena_wins[t["idx"]]
             arena_score = wins / max(max_wins, 1)

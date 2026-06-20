@@ -777,7 +777,7 @@ class PoetryAgent:
     # 守擂进化：硬门控 + 混合制评分
     # ═════════════════════════════════════════════════════════════════════════
 
-    # 混合制权重：本地客观维度 0.80 + pairwise 主观审美 0.20
+    # 混合制权重：本地客观维度 0.75 + pairwise 主观审美 0.25（见 config ARENA_*_WT）
     _CHALLENGER_PROMPT = (
         "你是一位精通中国古典诗词的创作专家。\n"
         "当前冠军诗作：\n{champion}\n\n"
@@ -800,7 +800,7 @@ class PoetryAgent:
                                                       topic_score=topic)
 
     def _pairwise_delta(self, won: bool) -> float:
-        """pairwise 审美微调：赢 +0.08，输 −0.02。权重远小于本地维度。"""
+        """pairwise 审美 delta：赢 +0.17，输 −0.05（见 config PAIRWISE_*_DELTA）。"""
         from config import PAIRWISE_WIN_DELTA, PAIRWISE_LOSE_DELTA
         return PAIRWISE_WIN_DELTA if won else PAIRWISE_LOSE_DELTA
 

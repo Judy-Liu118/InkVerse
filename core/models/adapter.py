@@ -2,9 +2,10 @@
 core.models.adapter -- 统一模型适配层
 
 支持本地模型（Qwen/LoRA）、DeepSeek API、阿里百炼（通义千问）API 无缝切换。
+
+重型依赖（torch）延迟到 _generate_local 内 import，纯 API 用户无需安装。
 """
 import os
-import torch
 from typing import List, Dict, Optional
 from core.logger import get_logger
 
@@ -120,6 +121,7 @@ class ModelAdapter:
         return bool(LOCAL_LORA_AVAILABLE)
 
     def _generate_local(self, messages, max_tokens, temperature) -> str:
+        import torch
         from core.models.manager import ModelManager
         mm = ModelManager()
         if self.backend == BACKEND_LOCAL_LORA:

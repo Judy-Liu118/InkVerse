@@ -7,7 +7,10 @@ core.models.manager -- 单例模型管理器，负责加载、缓存和释放所
 """
 import gc
 import os
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None  # 纯 API 模式无需 torch；本地加载方法触发时才会报错
 from config import BASE_MODEL_PATH, LORA_PATH, ZIMAGE_PATH
 from core.logger import get_logger
 
