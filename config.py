@@ -30,18 +30,32 @@ except ImportError:
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ===== 模型路径 =====
-BASE_MODEL_PATH = r"D:\AI_Models\Qwen2.5-1.5B-Instruct"
-LORA_PATH = os.path.join(ROOT_DIR, "models", "poetry_lora")
-ZIMAGE_PATH = "D:/AI_Models/z_image_fp8_full"
+# 本地权重默认存放路径（开发机约定）；通过环境变量覆盖即可在他机运行
+#   BASE_MODEL_PATH  → Qwen2.5-1.5B-Instruct 基座
+#   LORA_PATH        → 古诗微调 LoRA adapter
+#   ZIMAGE_PATH      → 本地 Z-Image 绘图 pipeline
+# 未配置或路径不存在时，应用会自动隐藏对应的本地选项，仅保留 API 后端
+BASE_MODEL_PATH = os.getenv("BASE_MODEL_PATH", r"D:\AI_Models\Qwen2.5-1.5B-Instruct")
+LORA_PATH       = os.getenv("LORA_PATH",       os.path.join(ROOT_DIR, "models", "poetry_lora"))
+ZIMAGE_PATH     = os.getenv("ZIMAGE_PATH",     r"D:\AI_Models\z_image_fp8_full")
+
+# 路径可用性探测（启动期一次性计算，供 UI 过滤下拉项使用）
+LOCAL_LLM_AVAILABLE   = os.path.isdir(BASE_MODEL_PATH)
+LOCAL_LORA_AVAILABLE  = LOCAL_LLM_AVAILABLE and os.path.isdir(LORA_PATH)
+LOCAL_IMAGE_AVAILABLE = os.path.isdir(ZIMAGE_PATH)
 
 # ===== LLM 后端配置 =====
-LLM_BACKEND   = "deepseek"
-LLM_API_KEY   = os.getenv("DEEPSEEK_API_KEY", "")
-LLM_API_MODEL = "deepseek-v4-flash"
+# 默认使用阿里百炼 qwen 系列（与 README 推荐一致）
+# 切换 DeepSeek 时改为：LLM_BACKEND="deepseek"、LLM_API_KEY=os.getenv("DEEPSEEK_API_KEY","")、LLM_API_MODEL="deepseek-chat"
+LLM_BACKEND   = "qwen"
+LLM_API_KEY   = os.getenv("DASHSCOPE_API_KEY", "")
+LLM_API_MODEL = "qwen-plus"
 
 # API Key（优先读环境变量）
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DASHSCOPE_API_KEY = os.getenv("DASHSCOPE_API_KEY", "")
+ZHIPU_API_KEY     = os.getenv("ZHIPU_API_KEY", "")
+MOONSHOT_API_KEY  = os.getenv("MOONSHOT_API_KEY", "")
 
 # ===== 图像后端配置 =====
 IMAGE_BACKEND   = "local"
@@ -72,6 +86,10 @@ CLIP_PROMPT_ALIGN_THRESHOLD = 0.15
 # ===== CLIP 双锚点权重 =====
 CLIP_POEM_WEIGHT   = 0.6   # 诗歌锚点权重（图像与诗歌关键词的匹配度）
 CLIP_PROMPT_WEIGHT = 0.4   # 提示词锚点权重（图像与提示词的匹配度）
+# 关键词稀疏时（<4 词，哲理/抽象诗常见）降诗锚权重，避免噪声锚点拖低评分
+CLIP_SPARSE_POEM_WEIGHT   = 0.3
+CLIP_SPARSE_PROMPT_WEIGHT = 0.7
+CLIP_SPARSE_WORD_THRESHOLD = 4
 # ===== 诗歌生成参数 =====
 POEM_CANDIDATE_COUNT = 5
 POEM_MAX_TOKENS = 160
@@ -100,7 +118,21 @@ IMAGE_STEPS = 8
 IMAGE_GUIDANCE = 0.0
 NEGATIVE_PROMPT = ""
 
+# ===== 远程 API 超时与重试 =====
+API_TIMEOUT_SUBMIT   = 30    # 任务提交（异步）
+API_TIMEOUT_SYNC     = 180   # 同步生图/编辑接口（Z-Image / Qwen-Image / Qwen-Image-Edit）
+API_TIMEOUT_POLL     = 15    # 轮询任务状态
+API_TIMEOUT_DOWNLOAD = 60    # 图像下载
+API_MAX_RETRIES      = 3     # 连接/超时类失败的指数退避重试次数（1s, 2s, 4s）
+API_POLL_INTERVAL    = 3     # 轮询间隔
+API_POLL_MAX_WAIT    = 120   # 轮询总等待上限
+
 # ===== 评分权重 =====
+# WEIGHT_*：完整评分用（scorer.evaluate_full），含 LLM 综合 intent 分
+#          → 改诗后的整体评估（每首诗 1 次 LLM 综合调用）
+# LOCAL_*_WT（见下文 Arena 配置）：Arena 阶段用（scorer.local_score_poem），仅 topic 一次 LLM
+#          → 批量评分（5 首诗只调 1 次 LLM，成本低 5 倍）
+# 两套故意分立，不可合并。两套权重总和均为 1.0，但维度不同（intent vs topic）。
 WEIGHT_INTENT   = 0.30      # 降权：LLM 主观评分易忽略格律硬伤（如意境好但平仄出律）
 WEIGHT_PINGZE   = 0.25      # 升权：平仄是近体诗铁律，应与主观评分平衡
 WEIGHT_RHYME    = 0.15
@@ -110,6 +142,11 @@ REPETITION_PENALTY_MAX = 0.15
 
 THRESHOLD_PINGZE = 0.8
 THRESHOLD_RHYME = 0.8
+
+# 评分聚合下限：penalty/clash/required_coeff 三个惩罚因子叠乘易导致分数溶解
+# （例如 0.85*0.75*0.75=0.48），给每个因子加下限避免好诗被多重惩罚吞没。
+# 0.7 表示单因子最多扣 30%，三因子叠乘下限 0.343。
+SCORE_PENALTY_FLOOR = 0.7
 
 # ===== 堆砌词汇黑名单（硬门控拦截）=====
 BAD_PATTERNS = {"我爱", "锦绣", "真美", "辉煌", "璀璨", "旖旎",

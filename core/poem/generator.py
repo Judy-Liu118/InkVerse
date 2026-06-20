@@ -36,9 +36,9 @@ class PoemGenerator:
             start_index=0,
         )
 
-        if not use_api and model is not None:
-            del model, tokenizer
-            self.mm._flush_gpu()
+        # 说明：此处不再 del + flush——model/tokenizer 只是局部引用，
+        # 真正的 GPU 持有者是 ModelManager._fine_model / _base_model，
+        # 释放由 manager 在下次 _release_* 时统一处理。
 
         if not candidates:
             _log.error("所有候选诗生成失败")
@@ -126,9 +126,9 @@ class PoemGenerator:
                     _log.info("✓ 合格池 %d 首可用，停止补充生成", len(qualified_pool))
                     break
 
-        if not use_api and model is not None:
-            del model, tokenizer
-            self.mm._flush_gpu()
+        # 说明：此处不再 del + flush——model/tokenizer 只是局部引用，
+        # 真正的 GPU 持有者是 ModelManager._fine_model / _base_model，
+        # 释放由 manager 在下次 _release_* 时统一处理。
 
         # ── 选最优 ────────────────────────────────────────────────────────
         if qualified_pool:
@@ -156,6 +156,45 @@ class PoemGenerator:
             "selection_mode":   selection_mode,
         }
 
+    # ── 候选生成（不打分，供 eval 等需要全部候选的场景）────────────────────
+    def preload_model(self, generation_adapter) -> None:
+        """显式触发本地模型加载（不生成任何内容）。
+
+        评测专用：用于在 _run_one 里把模型 load 时间和生成时间分开计量，
+        避免 §4 平均生成耗时被本地模型首次加载的 10+ 秒污染。
+        若 generation_adapter 走 API 后端，本方法 no-op。
+        """
+        _backend = getattr(generation_adapter, "backend", "") if generation_adapter else ""
+        if _backend in ("local", "local_lora"):
+            self._resolve_model(generation_adapter, _backend)
+
+    def generate_candidates_only(
+        self, user_request: str, generation_adapter,
+        creative_brief: str = "", count: int = None,
+        prompt_mode: str = "naked",
+    ) -> Tuple[str, List[str]]:
+        """只生成 count 个候选诗，不做评分和筛选。
+
+        prompt_mode:
+            'naked'（默认，保留生产行为）：本地模型仅传裸 user_request（最多补一句）
+                —— 这是 InkVerse 生产路径，LoRA 微调能识别简短输入。
+            'full'：本地模型也走 _build_api_prompt 拼出的完整 prompt（system 角色 +
+                格式约束 + 用户要求）—— 与 API 一致，**仅供评测公平对照**用。
+            （use_api=True 时本参数被忽略，API 永远走完整 prompt。）
+
+        返回: (genre_name, [poem_str, ...])。失败的候选会被跳过，列表长度可能 < count。
+        """
+        genre_name, num_lines, chars_per_line = self.scorer.detect_genre(user_request)
+        _backend = getattr(generation_adapter, "backend", "") if generation_adapter else ""
+        use_api, model, tokenizer = self._resolve_model(generation_adapter, _backend)
+        n = count if count is not None else POEM_CANDIDATE_COUNT
+        candidates = self._generate_candidates(
+            user_request, generation_adapter, model, tokenizer,
+            num_lines, chars_per_line, use_api, creative_brief, n,
+            start_index=0, prompt_mode=prompt_mode,
+        )
+        return genre_name, candidates
+
     # ── 内部辅助方法 ───────────────────────────────────────────────────────
     def _resolve_model(self, generation_adapter, backend: str):
         """解析模型类型，返回 (use_api, model, tokenizer)。"""
@@ -173,8 +212,12 @@ class PoemGenerator:
     def _generate_candidates(self, user_request, generation_adapter,
                              model, tokenizer, num_lines, chars_per_line,
                              use_api: bool, creative_brief: str,
-                             count: int, start_index: int = 0) -> list:
-        """生成 count 首候选诗，返回 poem 文本列表。"""
+                             count: int, start_index: int = 0,
+                             prompt_mode: str = "full") -> list:
+        """生成 count 首候选诗，返回 poem 文本列表。
+
+        prompt_mode 见 generate_candidates_only 文档。
+        """
         candidates = []
         for i in range(count):
             idx = start_index + i + 1
@@ -192,11 +235,19 @@ class PoemGenerator:
                 )
             else:
                 temp = POEM_TEMPERATURE + i * 0.08
-                if not any(g in user_request for g in ["五言", "七言", "绝句", "律诗"]):
-                    enhanced_request = f"{user_request}。请以五言绝句创作，每句5字，共4句。"
+                if prompt_mode == "naked":
+                    # 旧路径：保留给 LoRA ablation 使用
+                    if not any(g in user_request for g in ["五言", "七言", "绝句", "律诗"]):
+                        enhanced_request = f"{user_request}。请以五言绝句创作，每句5字，共4句。"
+                    else:
+                        enhanced_request = user_request
                 else:
-                    enhanced_request = user_request
-                _log.debug("LoRA prompt（候选 %d）:\n%s", idx, enhanced_request)
+                    # full：本地与 API 享受同样的格式引导，公平对照
+                    enhanced_request = self._build_api_prompt(
+                        user_request, chars_per_line, num_lines, brief=creative_brief,
+                    )
+                _log.debug("本地 prompt（mode=%s, 候选 %d）:\n%s",
+                           prompt_mode, idx, enhanced_request)
                 raw = self._call_model(model, tokenizer, enhanced_request, POEM_MAX_TOKENS, temp)
 
             poem = self._normalize(raw, chars_per_line)
@@ -205,7 +256,18 @@ class PoemGenerator:
                 candidates.append('\n'.join(lines))
                 _log.info("候选诗 %d 生成成功", idx)
             else:
-                _log.warning("候选诗 %d 生成失败，跳过", idx)
+                raw_preview = (raw or "").replace("\n", " ⏎ ")
+                if len(raw_preview) > 200:
+                    raw_preview = raw_preview[:200] + "...(+"+ str(len(raw)-200) +"字)"
+                poem_preview = poem.replace("\n", " ⏎ ")
+                if len(poem_preview) > 200:
+                    poem_preview = poem_preview[:200] + "..."
+                _log.warning(
+                    "候选诗 %d 生成失败：行数=%d/%d 不足 → 跳过\n"
+                    "    normalize 后：%s\n"
+                    "    raw 原始：%s",
+                    idx, len(lines), num_lines, poem_preview, raw_preview,
+                )
         return candidates
 
     def _score_candidates(self, candidates, num_lines, chars_per_line,
