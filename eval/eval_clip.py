@@ -36,8 +36,9 @@ from config import (
 )
 
 from eval.dataset import get_benchmark, BenchInput
-from eval.metrics import summarize, paired_delta
+from eval.metrics import summarize, paired_delta, spearman_corr, pearson_corr
 from eval.report import save_artifacts, table, fmt_num, print_and_return
+from eval.vlm_judge import VLMJudge
 
 
 def _make_adapter(model_choice: str, allow_lora_fallback: bool = False) -> ModelAdapter:
@@ -90,7 +91,8 @@ def _score_with_anchors(clip_eval, image, *, keywords_en: str, prompt: str,
     return wa * raw_poem + wb * raw_prompt
 
 
-def _run_one(agent: PoetryAgent, item: BenchInput, args) -> Dict[str, Any]:
+def _run_one(agent: PoetryAgent, item: BenchInput, args,
+             vlm_judge: "VLMJudge" = None) -> Dict[str, Any]:
     img_backend, img_api_model = _parse_backend(args.image_backend)
     state = AgentState(
         user_input=item.user_input,
@@ -138,6 +140,15 @@ def _run_one(agent: PoetryAgent, item: BenchInput, args) -> Dict[str, Any]:
             mode="dual"),
     }
 
+    # VLM oracle（开启时多调一次多模态 API；失败不影响 CLIP 行）
+    vlm_block = None
+    if vlm_judge is not None:
+        verdict = vlm_judge.score(
+            image=state.image, poem=state.poem, visual_keywords_en=keywords,
+        )
+        scores["vlm_oracle"] = verdict.score   # [0, 1]，可能为 None
+        vlm_block = verdict.as_dict()
+
     return {
         "user_input":      item.user_input,
         "genre":           item.genre,
@@ -148,7 +159,8 @@ def _run_one(agent: PoetryAgent, item: BenchInput, args) -> Dict[str, Any]:
         "keyword_word_count": word_count,
         "prompt":          state.prompt,
         "elapsed_sec":     round(elapsed, 2),
-        "raw_scores":      scores,   # 都是 raw cosine（[-1, 1]）
+        "raw_scores":      scores,   # 都是 raw cosine（[-1, 1]）；vlm_oracle ∈ [0,1]
+        "vlm":             vlm_block,
     }
 
 
@@ -236,9 +248,55 @@ def _render_report(args, ok_rows, all_rows):
         md.append(f"### {r['user_input']}（{r['keyword_density']}, 关键词 {r['keyword_word_count']} 词）")
         md.append(f"- 诗：`{r['poem'].replace(chr(10), ' / ')}`")
         md.append(f"- 视觉锚点：{r['visual_keywords_en']}")
-        md.append(f"- 分数：prompt_only={fmt_num(r['raw_scores']['prompt_only'])} | "
-                  f"poem_only={fmt_num(r['raw_scores']['poem_only'])} | "
-                  f"**dual={fmt_num(r['raw_scores']['dual'])}**")
+        line = (f"- 分数：prompt_only={fmt_num(r['raw_scores']['prompt_only'])} | "
+                f"poem_only={fmt_num(r['raw_scores']['poem_only'])} | "
+                f"**dual={fmt_num(r['raw_scores']['dual'])}**")
+        if r["raw_scores"].get("vlm_oracle") is not None:
+            line += f" | _VLM oracle={fmt_num(r['raw_scores']['vlm_oracle'])}_"
+        md.append(line)
+        if r.get("vlm") and r["vlm"].get("reasoning"):
+            md.append(f"- VLM 理由：{r['vlm']['reasoning']}")
+        md.append("")
+
+    # ── §5. VLM oracle 相关性（外部 ground truth 锚定）─────────────────────
+    has_vlm = any(r["raw_scores"].get("vlm_oracle") is not None for r in ok_rows)
+    if has_vlm:
+        md.append("## 5. CLIP 策略 vs VLM oracle 相关性（核心结论·外部锚定）")
+        vlm_model = next(
+            (r["vlm"]["model"] for r in ok_rows if r.get("vlm") and r["vlm"].get("model")),
+            "—",
+        )
+        n_vlm_ok = sum(1 for r in ok_rows if r["raw_scores"].get("vlm_oracle") is not None)
+        n_vlm_err = sum(1 for r in ok_rows
+                        if r.get("vlm") and r["vlm"].get("error"))
+        md.append(f"_VLM judge: **{vlm_model}** · 成功 {n_vlm_ok}/{len(ok_rows)}"
+                  f"（失败 {n_vlm_err}）_")
+        md.append("")
+
+        vlm_vals = col(ok_rows, "vlm_oracle")
+        rows = []
+        for strat in ("prompt_only", "poem_only", "dual"):
+            paired_rows = [
+                r for r in ok_rows
+                if r["raw_scores"].get(strat) is not None
+                and r["raw_scores"].get("vlm_oracle") is not None
+            ]
+            xs = [r["raw_scores"][strat] for r in paired_rows]
+            ys = [r["raw_scores"]["vlm_oracle"] for r in paired_rows]
+            sp = spearman_corr(xs, ys)
+            pe = pearson_corr(xs, ys)
+            rows.append([
+                strat, len(paired_rows),
+                fmt_num(sp, 3) if sp is not None else "—",
+                fmt_num(pe, 3) if pe is not None else "—",
+            ])
+        md.append(table(
+            ["CLIP 策略", "n", "Spearman ρ", "Pearson r"], rows,
+        ))
+        md.append("")
+        md.append("> **解读**：Spearman 越高 → 该 CLIP 策略对图文契合度的排序与 VLM "
+                  "ground truth 越一致。理想情况下 dual > prompt_only / poem_only，"
+                  "证明双锚点设计不只是「自我感觉良好」，而是真的更接近人类判图。")
         md.append("")
 
     return "\n".join(md)
@@ -257,24 +315,41 @@ def main():
                    help="评分/关键词抽取/起名模型；qwen-plus 是性价比之选")
     p.add_argument("--image-backend", default="bailian:wanx2.1-t2i-turbo",
                    help="图像后端，如 local 或 bailian:wanx2.1-t2i-turbo")
+    p.add_argument("--vlm-judge", default="none",
+                   help="VLM ground-truth judge: none / qwen-vl-max / qwen-vl-plus / glm-4v-plus")
     args = p.parse_args()
 
     inputs = get_benchmark(n=args.n, genres=args.genres, density=args.density)
-    print(f"[eval_clip] 跑 {len(inputs)} 条 · image={args.image_backend}")
+    print(f"[eval_clip] 跑 {len(inputs)} 条 · image={args.image_backend}"
+          + (f" · vlm-judge={args.vlm_judge}" if args.vlm_judge != "none" else ""))
     agent = _build_agent(args)
+
+    vlm_judge = None
+    if args.vlm_judge and args.vlm_judge.lower() != "none":
+        try:
+            vlm_judge = VLMJudge(model=args.vlm_judge)
+            print(f"  [VLM oracle] 启用 {args.vlm_judge}（每条样本多调 1 次 API）")
+        except Exception as e:
+            print(f"  [VLM oracle] ⚠ 初始化失败，将不跑 oracle: {e}")
+            vlm_judge = None
 
     all_rows = []
     for i, item in enumerate(inputs):
         print(f"  [{i+1}/{len(inputs)}] {item.user_input[:30]}…")
         try:
-            r = _run_one(agent, item, args)
+            r = _run_one(agent, item, args, vlm_judge=vlm_judge)
             all_rows.append(r)
             if "error" in r:
                 print(f"      ⚠ {r['error']}")
             else:
                 s = r["raw_scores"]
-                print(f"      prompt_only={fmt_num(s['prompt_only'])} | "
-                      f"poem_only={fmt_num(s['poem_only'])} | dual={fmt_num(s['dual'])}")
+                msg = (f"      prompt_only={fmt_num(s['prompt_only'])} | "
+                       f"poem_only={fmt_num(s['poem_only'])} | dual={fmt_num(s['dual'])}")
+                if s.get("vlm_oracle") is not None:
+                    msg += f" | vlm={fmt_num(s['vlm_oracle'])}"
+                elif r.get("vlm") and r["vlm"].get("error"):
+                    msg += f" | vlm ⚠ {r['vlm']['error'][:30]}"
+                print(msg)
         except Exception as e:
             print(f"      ⚠ 异常：{e}")
             all_rows.append({"user_input": item.user_input, "error": str(e)})
