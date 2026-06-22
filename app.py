@@ -125,32 +125,8 @@ def _auto_image_caption(state: AgentState, config: AutonomousConfig) -> str:
     return _image_caption(state, "自主创作", "")
 
 
-# ── 图像风格映射 ─────────────────────────────────────────────────────────────
-STYLE_MAP = {
-    "水墨画":   "Chinese ink wash painting, sumi-e, monochrome, minimalist, Song Dynasty style",
-    "工笔画":   "gongbi fine brushwork, highly detailed, traditional Chinese painting, vivid pigments",
-    "写意画":   "xieyi freehand ink painting, expressive spontaneous brushwork, loose poetic strokes",
-    "青绿山水": "Chinese blue-green landscape, qinglu style, mineral pigments, Tang Dynasty luminous",
-    "油画":     "classical oil painting, rich impasto textures, dramatic chiaroscuro, Renaissance style",
-    "卡通插画": "flat vector illustration, clean lines, soft pastel palette, gentle storybook style",
-    "浮世绘":   "ukiyo-e woodblock print, bold outlines, flat decorative colors, Edo period Japanese art",
-}
-STYLE_MAP_CN = {
-    "水墨画":   "中国水墨画，素墨写意，极简留白，宋代画风",
-    "工笔画":   "工笔细描，精微入微，中国传统工笔，浓丽赋彩",
-    "写意画":   "写意水墨，放笔挥洒，诗意笔触，逸气横生",
-    "青绿山水": "青绿山水，石青石绿，矿物颜料，唐代金碧辉映",
-    "油画":     "古典油画，厚涂肌理，戏剧性明暗对比，文艺复兴风格",
-    "卡通插画": "平面矢量插画，线条干净，柔和粉彩，温馨绘本风格",
-    "浮世绘":   "浮世绘版画，勾勒分明，平面装饰色彩，江户日本风情",
-}
-
-
-def get_style_suffix(style_name: str, lang: str) -> str:
-    """根据语言返回对应风格后缀。"""
-    if lang == "中文":
-        return STYLE_MAP_CN.get(style_name, STYLE_MAP_CN["水墨画"])
-    return STYLE_MAP.get(style_name, STYLE_MAP["水墨画"])
+# 图像风格映射统一从 config 引入，保证 eval 与 UI 同源
+from config import STYLE_MAP, STYLE_MAP_CN, get_style_suffix  # noqa: E402
 
 # 标点字体 style（确保「，」「。」使用包含这些字形的字体）
 _PUNCT_STYLE = (

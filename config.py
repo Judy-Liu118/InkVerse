@@ -118,6 +118,35 @@ IMAGE_STEPS = 8
 IMAGE_GUIDANCE = 0.0
 NEGATIVE_PROMPT = ""
 
+# ===== 图像风格映射（中英双语 prompt 后缀）=====
+# 单一来源：UI 选项、eval 默认锁定的"水墨画"基线 prompt 都从这里取，
+# 避免 eval 路径与生产 UI 路径风格 anchor 漂移。
+STYLE_MAP = {
+    "水墨画":   "Chinese ink wash painting, sumi-e, monochrome, minimalist, Song Dynasty style",
+    "工笔画":   "gongbi fine brushwork, highly detailed, traditional Chinese painting, vivid pigments",
+    "写意画":   "xieyi freehand ink painting, expressive spontaneous brushwork, loose poetic strokes",
+    "青绿山水": "Chinese blue-green landscape, qinglu style, mineral pigments, Tang Dynasty luminous",
+    "油画":     "classical oil painting, rich impasto textures, dramatic chiaroscuro, Renaissance style",
+    "卡通插画": "flat vector illustration, clean lines, soft pastel palette, gentle storybook style",
+    "浮世绘":   "ukiyo-e woodblock print, bold outlines, flat decorative colors, Edo period Japanese art",
+}
+STYLE_MAP_CN = {
+    "水墨画":   "中国水墨画，素墨写意，极简留白，宋代画风",
+    "工笔画":   "工笔细描，精微入微，中国传统工笔，浓丽赋彩",
+    "写意画":   "写意水墨，放笔挥洒，诗意笔触，逸气横生",
+    "青绿山水": "青绿山水，石青石绿，矿物颜料，唐代金碧辉映",
+    "油画":     "古典油画，厚涂肌理，戏剧性明暗对比，文艺复兴风格",
+    "卡通插画": "平面矢量插画，线条干净，柔和粉彩，温馨绘本风格",
+    "浮世绘":   "浮世绘版画，勾勒分明，平面装饰色彩，江户日本风情",
+}
+
+
+def get_style_suffix(style_name: str, lang: str) -> str:
+    """根据语言返回对应风格后缀；未知 style 兜底为水墨画。"""
+    if lang == "中文":
+        return STYLE_MAP_CN.get(style_name, STYLE_MAP_CN["水墨画"])
+    return STYLE_MAP.get(style_name, STYLE_MAP["水墨画"])
+
 # ===== 远程 API 超时与重试 =====
 API_TIMEOUT_SUBMIT   = 30    # 任务提交（异步）
 API_TIMEOUT_SYNC     = 180   # 同步生图/编辑接口（Z-Image / Qwen-Image / Qwen-Image-Edit）

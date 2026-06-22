@@ -27,7 +27,7 @@ from core.models.adapter import ModelAdapter
 from core.agent.agent import PoetryAgent
 from core.agent.autonomous import autonomous_full_run, AutonomousConfig
 from core.agent.state import AgentState, Phase
-from config import DASHSCOPE_API_KEY, DEEPSEEK_API_KEY
+from config import DASHSCOPE_API_KEY, DEEPSEEK_API_KEY, STYLE_MAP
 
 from eval.dataset import get_benchmark, BenchInput
 from eval.metrics import summarize, paired_delta
@@ -64,7 +64,7 @@ def _new_state(item: BenchInput, args) -> AgentState:
     return AgentState(
         user_input=item.user_input,
         lang="英文",
-        style_suffix="Chinese ink wash painting, sumi-e, monochrome, minimalist",
+        style_suffix=STYLE_MAP["水墨画"],
         image_backend=img_backend,
         image_api_key=DASHSCOPE_API_KEY if img_backend == "bailian" else None,
         image_api_model=img_api_model,

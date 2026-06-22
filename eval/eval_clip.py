@@ -22,8 +22,12 @@ eval.eval_clip -- CLIP 双锚点 vs 单锚点对齐分对比（项目核心创�
 from __future__ import annotations
 
 import argparse
+import json
+import re
 import time
-from typing import Any, Dict, List
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from core.models.adapter import ModelAdapter
 from core.agent.agent import PoetryAgent
@@ -33,6 +37,7 @@ from config import (
     CLIP_POEM_WEIGHT, CLIP_PROMPT_WEIGHT,
     CLIP_SPARSE_POEM_WEIGHT, CLIP_SPARSE_PROMPT_WEIGHT,
     CLIP_SPARSE_WORD_THRESHOLD,
+    STYLE_MAP,
 )
 
 from eval.dataset import get_benchmark, BenchInput
@@ -66,6 +71,71 @@ def _parse_backend(val: str):
     return "local", None
 
 
+def _backend_short_tag(backend_str: str) -> str:
+    """给图像存档目录用的短 tag，便于多次 run 不撞名。"""
+    if backend_str.startswith("bailian:"):
+        model = backend_str.split(":", 1)[1].replace(".", "").replace("-", "")
+        return f"bailian-{model[:10]}"
+    if backend_str == "local":
+        return "local-zimg"
+    return re.sub(r"[^a-zA-Z0-9]+", "-", backend_str)[:20]
+
+
+def _load_reused_rows(path: str) -> List[Dict[str, Any]]:
+    """从上次 eval_clip 的 JSON 加载成功 row（用于复用诗/锚点/prompt）。"""
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    rows = data.get("rows", data) if isinstance(data, dict) else data
+    required = ("user_input", "poem", "prompt", "genre", "theme", "keyword_density")
+    ok: List[Dict[str, Any]] = []
+    for r in rows:
+        if "error" in r:
+            continue
+        missing = [k for k in required if k not in r]
+        if missing:
+            raise ValueError(
+                f"JSON row 缺少字段 {missing}：{str(r.get('user_input',''))[:30]}"
+            )
+        ok.append(r)
+    if not ok:
+        raise ValueError(f"{path} 没有可复用的成功 row（rows 全为 error 或缺字段）")
+    return ok
+
+
+_INVALID_FNAME_CHARS = re.compile(r'[\\/:*?"<>|\s]+')
+
+
+def _sanitize_tag(s: str, max_len: int = 24) -> str:
+    s = _INVALID_FNAME_CHARS.sub("_", (s or "").strip())
+    s = s.strip("._") or "untitled"
+    return s[:max_len]
+
+
+def _score_tag(prefix: str, val: Optional[float]) -> str:
+    if val is None:
+        return f"{prefix}xxx"
+    pct = max(0, min(100, int(round(val * 100))))
+    return f"{prefix}{pct:03d}"
+
+
+def _save_eval_image(image, save_dir: Path, idx: int, item: "BenchInput",
+                     scores: Dict[str, Optional[float]]) -> Optional[str]:
+    """落盘生成的图；返回相对 outputs/eval/ 的链接路径（供 md 用）。失败返回 None。"""
+    fname = (
+        f"{idx:02d}_"
+        f"{_score_tag('d', scores.get('dual'))}_"
+        f"{_score_tag('v', scores.get('vlm_oracle'))}_"
+        f"{_sanitize_tag(item.theme)}.png"
+    )
+    target = save_dir / fname
+    try:
+        image.save(target, format="PNG")
+    except Exception as e:
+        print(f"      ⚠ 图片落盘失败：{e}")
+        return None
+    return f"{save_dir.name}/{fname}"
+
+
 def _score_with_anchors(clip_eval, image, *, keywords_en: str, prompt: str,
                         mode: str) -> float:
     """根据 mode 返回该锚点策略下的 CLIP raw 分。
@@ -92,30 +162,41 @@ def _score_with_anchors(clip_eval, image, *, keywords_en: str, prompt: str,
 
 
 def _run_one(agent: PoetryAgent, item: BenchInput, args,
-             vlm_judge: "VLMJudge" = None) -> Dict[str, Any]:
+             vlm_judge: "VLMJudge" = None,
+             image_save_dir: Optional[Path] = None,
+             index: int = 0,
+             reused: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     img_backend, img_api_model = _parse_backend(args.image_backend)
     state = AgentState(
         user_input=item.user_input,
         lang="英文",
-        style_suffix="Chinese ink wash painting, sumi-e, monochrome, minimalist",
+        style_suffix=STYLE_MAP["水墨画"],
         image_backend=img_backend,
         image_api_key=DASHSCOPE_API_KEY if img_backend == "bailian" else None,
         image_api_model=img_api_model,
     )
 
     t0 = time.time()
-    state = agent._phase_plan(state)
-    state = agent._phase_poem(state)
-    if state.phase == Phase.ERROR:
-        return {"user_input": item.user_input, "error": state.error}
-    state = agent._phase_keyword_extract(state)
-    state = agent._phase_title(state)
-    state = agent._phase_prompt(state)
-    if state.phase == Phase.ERROR:
-        return {"user_input": item.user_input, "error": state.error}
-    state = agent._phase_prompt_review(state)
-    # 注意：_phase_image_clip 内部已含 CLIP 重试逻辑；我们需要拿到 image
-    state = agent._phase_image_clip(state)
+    if reused is not None:
+        # 严谨对照模式：复用上次的诗 + 视觉锚点 + 英文 prompt，只重新出图 + 评分
+        # → 两次 run 的唯一变量就是 image backend 本身
+        state.poem = reused["poem"]
+        state.visual_keywords_en = reused.get("visual_keywords_en", "") or ""
+        state.prompt = reused["prompt"]
+        state = agent._phase_image_clip(state)
+    else:
+        state = agent._phase_plan(state)
+        state = agent._phase_poem(state)
+        if state.phase == Phase.ERROR:
+            return {"user_input": item.user_input, "error": state.error}
+        state = agent._phase_keyword_extract(state)
+        state = agent._phase_title(state)
+        state = agent._phase_prompt(state)
+        if state.phase == Phase.ERROR:
+            return {"user_input": item.user_input, "error": state.error}
+        state = agent._phase_prompt_review(state)
+        # 注意：_phase_image_clip 内部已含 CLIP 重试逻辑；我们需要拿到 image
+        state = agent._phase_image_clip(state)
     elapsed = time.time() - t0
 
     if state.image is None:
@@ -149,6 +230,11 @@ def _run_one(agent: PoetryAgent, item: BenchInput, args,
         scores["vlm_oracle"] = verdict.score   # [0, 1]，可能为 None
         vlm_block = verdict.as_dict()
 
+    # 图片落盘（在拿到 dual + vlm 分数后命名，便于按撕裂程度肉眼扫文件夹）
+    image_path = None
+    if image_save_dir is not None:
+        image_path = _save_eval_image(state.image, image_save_dir, index, item, scores)
+
     return {
         "user_input":      item.user_input,
         "genre":           item.genre,
@@ -161,15 +247,21 @@ def _run_one(agent: PoetryAgent, item: BenchInput, args,
         "elapsed_sec":     round(elapsed, 2),
         "raw_scores":      scores,   # 都是 raw cosine（[-1, 1]）；vlm_oracle ∈ [0,1]
         "vlm":             vlm_block,
+        "image_path":      image_path,
     }
 
 
 def _render_report(args, ok_rows, all_rows):
     md = []
     md.append("# eval_clip 报告 · 双锚点 vs 单锚点 CLIP 对齐分")
+    reuse_suffix = ""
+    if getattr(args, "reuse_poems_from", None):
+        reuse_suffix = f" · **复用诗自** `{args.reuse_poems_from}`（仅 backend 不同）"
+        if getattr(args, "reuse_indices", None):
+            reuse_suffix += f"，indices={args.reuse_indices}"
     md.append(f"_n={len(ok_rows)}/{len(all_rows)} · image={args.image_backend} · "
               f"权重: 标准={CLIP_POEM_WEIGHT}/{CLIP_PROMPT_WEIGHT} · "
-              f"稀疏={CLIP_SPARSE_POEM_WEIGHT}/{CLIP_SPARSE_PROMPT_WEIGHT} (阈值={CLIP_SPARSE_WORD_THRESHOLD})_")
+              f"稀疏={CLIP_SPARSE_POEM_WEIGHT}/{CLIP_SPARSE_PROMPT_WEIGHT} (阈值={CLIP_SPARSE_WORD_THRESHOLD}){reuse_suffix}_")
     md.append("")
 
     if not ok_rows:
@@ -244,8 +336,10 @@ def _render_report(args, ok_rows, all_rows):
     md.append("")
 
     md.append("## 4. 抽样诗作 + 分数")
-    for r in ok_rows[:5]:
+    for r in ok_rows:
         md.append(f"### {r['user_input']}（{r['keyword_density']}, 关键词 {r['keyword_word_count']} 词）")
+        if r.get("image_path"):
+            md.append(f"![]({r['image_path']})")
         md.append(f"- 诗：`{r['poem'].replace(chr(10), ' / ')}`")
         md.append(f"- 视觉锚点：{r['visual_keywords_en']}")
         line = (f"- 分数：prompt_only={fmt_num(r['raw_scores']['prompt_only'])} | "
@@ -317,9 +411,60 @@ def main():
                    help="图像后端，如 local 或 bailian:wanx2.1-t2i-turbo")
     p.add_argument("--vlm-judge", default="none",
                    help="VLM ground-truth judge: none / qwen-vl-max / qwen-vl-plus / glm-4v-plus")
+    p.add_argument("--no-save-images", action="store_true",
+                   help="不落盘生成的图（默认会存到 outputs/eval/clip_img_<ts>/）")
+    p.add_argument("--reuse-poems-from", default=None,
+                   help="复用指定 JSON 文件里的 poem/visual_keywords_en/prompt，"
+                        "跳过生诗+生 prompt；用于严谨的 image-backend 对比"
+                        "（唯一变量 = 后端）")
+    p.add_argument("--reuse-indices", default=None,
+                   help="复用模式下挑特定行（1-based，逗号分隔，如 \"2,4,10\"），"
+                        "用于跨 backend 的撕裂样本 spot check；"
+                        "需配合 --reuse-poems-from；与 --n 同时给时 indices 优先")
     args = p.parse_args()
 
-    inputs = get_benchmark(n=args.n, genres=args.genres, density=args.density)
+    reuse_rows: Optional[List[Dict[str, Any]]] = None
+    if args.reuse_poems_from:
+        reuse_rows = _load_reused_rows(args.reuse_poems_from)
+
+        # --reuse-indices 优先：1-based，跟 baseline 报告 §4 的编号对齐
+        if args.reuse_indices:
+            try:
+                idx_list = [int(x.strip()) for x in args.reuse_indices.split(",")
+                            if x.strip()]
+            except ValueError as e:
+                raise ValueError(
+                    f"--reuse-indices 格式错误（应为 \"2,4,10\"）: {e}"
+                ) from e
+            if not idx_list:
+                raise ValueError("--reuse-indices 为空")
+            picked: List[Dict[str, Any]] = []
+            for i in idx_list:
+                if not (1 <= i <= len(reuse_rows)):
+                    raise ValueError(
+                        f"--reuse-indices 中的 {i} 越界（JSON 共 {len(reuse_rows)} 行）"
+                    )
+                picked.append(reuse_rows[i - 1])
+            reuse_rows = picked
+            print(f"  [挑选 indices] {idx_list} → {len(reuse_rows)} 条")
+        elif args.n and args.n < len(reuse_rows):
+            reuse_rows = reuse_rows[: args.n]
+
+        inputs = [
+            BenchInput(
+                user_input=r["user_input"],
+                genre=r["genre"],
+                theme=r["theme"],
+                keyword_density=r["keyword_density"],
+            )
+            for r in reuse_rows
+        ]
+        print(f"[eval_clip] 复用模式 · 从 {args.reuse_poems_from} 读 {len(inputs)} 首诗 → 只换 backend 重出图")
+    elif args.reuse_indices:
+        raise ValueError("--reuse-indices 必须配合 --reuse-poems-from 使用")
+    else:
+        inputs = get_benchmark(n=args.n, genres=args.genres, density=args.density)
+
     print(f"[eval_clip] 跑 {len(inputs)} 条 · image={args.image_backend}"
           + (f" · vlm-judge={args.vlm_judge}" if args.vlm_judge != "none" else ""))
     agent = _build_agent(args)
@@ -333,11 +478,21 @@ def main():
             print(f"  [VLM oracle] ⚠ 初始化失败，将不跑 oracle: {e}")
             vlm_judge = None
 
+    image_save_dir: Optional[Path] = None
+    if not args.no_save_images:
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        tag = _backend_short_tag(args.image_backend)
+        image_save_dir = Path("outputs/eval") / f"clip_img_{ts}_{tag}"
+        image_save_dir.mkdir(parents=True, exist_ok=True)
+        print(f"  [图像存档] {image_save_dir}（文件名 = 序号_dXXX_vXXX_主题）")
+
     all_rows = []
     for i, item in enumerate(inputs):
         print(f"  [{i+1}/{len(inputs)}] {item.user_input[:30]}…")
         try:
-            r = _run_one(agent, item, args, vlm_judge=vlm_judge)
+            r = _run_one(agent, item, args, vlm_judge=vlm_judge,
+                         image_save_dir=image_save_dir, index=i + 1,
+                         reused=(reuse_rows[i] if reuse_rows else None))
             all_rows.append(r)
             if "error" in r:
                 print(f"      ⚠ {r['error']}")
