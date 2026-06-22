@@ -77,49 +77,31 @@ class BailianImageAPI:
         self, prompt: str, negative_prompt: str = "",
         width: int = 512, height: int = 512,
     ) -> Image.Image:
-        if self._is_z_image_model(self.model):
-            return self._generate_z_image(prompt, width, height)
-        if self._is_qwen_image_model(self.model):
-            return self._generate_qwen_image(prompt, width, height)
+        if self._is_modern_multimodal_model(self.model):
+            return self._generate_via_multimodal(prompt, width, height)
+        # 旧 wanx2.1 等：v1 异步 text2image 接口
         size_str = self._resolve_size(width, height)
         task_id  = self._submit_task(prompt, negative_prompt, size_str)
         img_url  = self._poll_until_done(task_id)
         return self._download_image(img_url)
 
-    def _generate_z_image(self, prompt: str, width: int, height: int) -> Image.Image:
+    def _generate_via_multimodal(self, prompt: str, width: int, height: int) -> Image.Image:
+        """新版同步多模态生图接口；z-image / qwen-image / wan2.x 共用。"""
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
-        size = self._resolve_z_image_size(width, height)
+        size = self._resolve_modern_size(width, height)
         payload = {
             "model": self.model,
             "input": {"messages": [{"role": "user", "content": [{"text": prompt}]}]},
             "parameters": {"size": size, "watermark": False},
         }
-        _log.info("调用 Z-Image 同步接口 (%s, %s)", self.model, size)
-        resp = _post(_MULTIMODAL_GENERATION_URL, op="z-image",
+        _log.info("调用同步多模态生图接口 (%s, %s)", self.model, size)
+        resp = _post(_MULTIMODAL_GENERATION_URL, op=self.model,
                      json=payload, headers=headers, timeout=API_TIMEOUT_SYNC)
         resp.raise_for_status()
         data = resp.json()
         img_url = self._extract_image_url(data)
         if not img_url:
-            raise RuntimeError(f"Z-Image 未返回图片 URL: {data}")
-        return self._download_image(img_url)
-
-    def _generate_qwen_image(self, prompt: str, width: int, height: int) -> Image.Image:
-        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
-        size = self._resolve_qwen_image_size(width, height)
-        payload = {
-            "model": self.model,
-            "input": {"messages": [{"role": "user", "content": [{"text": prompt}]}]},
-            "parameters": {"size": size, "watermark": False},
-        }
-        _log.info("调用 Qwen-Image 同步接口 (%s, %s)", self.model, size)
-        resp = _post(_MULTIMODAL_GENERATION_URL, op="qwen-image",
-                     json=payload, headers=headers, timeout=API_TIMEOUT_SYNC)
-        resp.raise_for_status()
-        data = resp.json()
-        img_url = self._extract_image_url(data)
-        if not img_url:
-            raise RuntimeError(f"Qwen-Image 未返回图片 URL: {data}")
+            raise RuntimeError(f"{self.model} 未返回图片 URL: {data}")
         return self._download_image(img_url)
 
     def _submit_task(self, prompt: str, negative_prompt: str, size: str) -> str:
@@ -204,29 +186,29 @@ class BailianImageAPI:
         return m.group(0) if m else ""
 
     @staticmethod
-    def _is_z_image_model(model: str) -> bool:
-        return (model or "").lower().startswith("z-image")
-
-    @staticmethod
-    def _is_qwen_image_model(model: str) -> bool:
+    def _is_modern_multimodal_model(model: str) -> bool:
+        """识别走新同步多模态接口的模型：z-image / qwen-image / wan2.x。"""
         name = (model or "").lower()
-        return name.startswith("qwen-image") and "edit" not in name
+        if name.startswith("z-image"):
+            return True
+        if name.startswith("qwen-image") and "edit" not in name:
+            return True
+        # wan2.2 / 2.5 / 2.6 / 2.7 等新代万相；不匹配老的 wanx2.x
+        if re.match(r"^wan2\.\d", name):
+            return True
+        return False
 
     @staticmethod
     def _resolve_size(w: int, h: int) -> str:
+        """旧 wanx2.1 异步接口用：64 对齐 + [512, 1024] 钳制。"""
         def snap(v: int) -> int:
             v = max(512, min(1024, v))
             return (v // 64) * 64
         return f"{snap(w)}*{snap(h)}"
 
     @staticmethod
-    def _resolve_z_image_size(w: int, h: int) -> str:
-        if abs(w - h) < 96:
-            return "1024*1024"
-        return "1024*768" if w > h else "768*1024"
-
-    @staticmethod
-    def _resolve_qwen_image_size(w: int, h: int) -> str:
+    def _resolve_modern_size(w: int, h: int) -> str:
+        """新同步接口用：归到 1024*1024 / 1024*768 / 768*1024 三档。"""
         if abs(w - h) < 96:
             return "1024*1024"
         return "1024*768" if w > h else "768*1024"
