@@ -244,7 +244,7 @@ def main():
     p.add_argument("--poem-model",   default="local_lora")
     p.add_argument("--prompt-model", default="qwen-max")
     p.add_argument("--scorer",       default="qwen-plus")
-    p.add_argument("--image-backend", default="bailian:wanx2.1-t2i-turbo")
+    p.add_argument("--image-backend", default="bailian:qwen-image-max")
     p.add_argument("--target",       type=float, default=0.30,
                    help="autonomous 模式的 CLIP 目标分（提前停止阈值）")
     p.add_argument("--max-img-rounds",  type=int, default=2)
