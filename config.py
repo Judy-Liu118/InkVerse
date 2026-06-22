@@ -59,7 +59,7 @@ MOONSHOT_API_KEY  = os.getenv("MOONSHOT_API_KEY", "")
 
 # ===== 图像后端配置 =====
 IMAGE_BACKEND   = "local"
-IMAGE_API_MODEL = "wanx2.1-t2i-turbo"
+IMAGE_API_MODEL = "qwen-image-max"
 # 显存狂暴模式：True=全量权重新进显存（生图秒级，需>12GB显存）
 #               False=CPU Offload（省显存但生图慢数倍）
 GPU_BEAST_MODE = False
