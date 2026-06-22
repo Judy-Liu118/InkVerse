@@ -407,8 +407,8 @@ def main():
                    help="英文提示词生成模型；推荐 qwen-max")
     p.add_argument("--scorer",       default="qwen-plus",
                    help="评分/关键词抽取/起名模型；qwen-plus 是性价比之选")
-    p.add_argument("--image-backend", default="bailian:qwen-image-max",
-                   help="图像后端，如 local 或 bailian:qwen-image-max")
+    p.add_argument("--image-backend", default="bailian:qwen-image-2.0-pro",
+                   help="图像后端，如 local 或 bailian:qwen-image-2.0-pro")
     p.add_argument("--vlm-judge", default="none",
                    help="VLM ground-truth judge: none / qwen-vl-max / qwen-vl-plus / glm-4v-plus")
     p.add_argument("--no-save-images", action="store_true",

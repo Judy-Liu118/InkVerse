@@ -878,14 +878,15 @@ IMAGE_BACKEND_CHOICES = _LOCAL_IMAGE_CHOICE + [
     ("百炼 · Z-Image Turbo API（非量化，推荐）",                "bailian:z-image-turbo"),
     ("百炼 · wan2.7-image-pro（极简禅意，留白极致）",           "bailian:wan2.7-image-pro"),
     ("百炼 · Qwen-Image Plus",                                 "bailian:qwen-image-plus"),
-    ("百炼 · Qwen-Image Max（清润水墨，跨主题最稳）",           "bailian:qwen-image-max"),
+    ("百炼 · Qwen-Image Max（清润水墨）",                       "bailian:qwen-image-max"),
     ("百炼 · Qwen-Image 2.0",                                  "bailian:qwen-image-2.0"),
-    ("百炼 · Qwen-Image 2.0 Pro（大写意水墨，墨色淋漓）",       "bailian:qwen-image-2.0-pro"),
+    ("百炼 · Qwen-Image 2.0 Pro（推荐，大写意水墨，跨主题最稳）",  "bailian:qwen-image-2.0-pro"),
     ("百炼 · Qwen-Image 2.0 2026-03-03",                       "bailian:qwen-image-2.0-2026-03-03"),
 ]
 
-# 默认图像后端：本地 Z-Image 可用时优先（生成快），否则用 Qwen-Image Max（跨主题最稳）
-_DEFAULT_IMAGE_BACKEND = "local" if LOCAL_IMAGE_AVAILABLE else "bailian:qwen-image-max"
+# 默认图像后端：本地 Z-Image 可用时优先（生成快），否则用 Qwen-Image 2.0 Pro
+# （n=10 baseline 全维度优于 Max：§5 Spearman 0.308 / 翻车修复 #4 #9 / CLIP 天花板 0.397）
+_DEFAULT_IMAGE_BACKEND = "local" if LOCAL_IMAGE_AVAILABLE else "bailian:qwen-image-2.0-pro"
 
 # ── Gradio Blocks ─────────────────────────────────────────────────────────────
 with gr.Blocks(

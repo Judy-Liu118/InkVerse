@@ -67,7 +67,7 @@ def _get(url, *, op, **kwargs):
 class BailianImageAPI:
     """阿里百炼文生图 API 封装。"""
 
-    def __init__(self, api_key: str, model: str = "qwen-image-max"):
+    def __init__(self, api_key: str, model: str = "qwen-image-2.0-pro"):
         self.api_key = api_key
         self.model   = model
         if not api_key:
