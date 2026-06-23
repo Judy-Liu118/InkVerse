@@ -398,7 +398,8 @@ def _render_report(args, ok_rows, all_rows):
 
 def main():
     p = argparse.ArgumentParser(description="CLIP 双锚点 vs 单锚点对齐分对比")
-    p.add_argument("--n", type=int, default=10, help="跑多少条 benchmark")
+    p.add_argument("--n", type=int, default=None,
+                   help="跑多少条 benchmark；非 reuse 模式默认 10，reuse 模式默认全跑")
     p.add_argument("--genres", nargs="*", default=None)
     p.add_argument("--density", choices=["rich", "sparse"], default=None)
     p.add_argument("--poem-model",   default="local_lora",
@@ -463,7 +464,8 @@ def main():
     elif args.reuse_indices:
         raise ValueError("--reuse-indices 必须配合 --reuse-poems-from 使用")
     else:
-        inputs = get_benchmark(n=args.n, genres=args.genres, density=args.density)
+        inputs = get_benchmark(n=args.n if args.n is not None else 10,
+                               genres=args.genres, density=args.density)
 
     print(f"[eval_clip] 跑 {len(inputs)} 条 · image={args.image_backend}"
           + (f" · vlm-judge={args.vlm_judge}" if args.vlm_judge != "none" else ""))
