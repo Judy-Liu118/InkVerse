@@ -16,6 +16,7 @@
 
 辅助工具：
 - `analyze_clip_dual.py` —— 对 eval_clip JSON 做 dual 锚点合理性分析（α grid search + 锚点互补性）
+- `analyze_judge_pingze_sensitivity.py` —— 对 eval_poem JSON 做 F3 retrospective 分析（按 pingze 差分桶 + controlled pair + winner 切片）
 - `build_classics_benchmark.py` —— 构造 15 首唐诗名作 benchmark 供 eval_clip 复用
 - `dataset.py` —— 主 benchmark 题源 + `--dump` 导出 `benchmark_themes.json`
 
@@ -72,6 +73,7 @@ python -m eval.analyze_clip_dual outputs/eval/eval_clip_<timestamp>.json
 | 文件 | 实验 | 报告日期 |
 |---|---|---|
 | [`REPORT_main_n32x3run_20260624.md`](REPORT_main_n32x3run_20260624.md) | 4 模型 × 4 评委 × n=32 × 3 run 主跑 | 2026-06-24 |
+| [`REPORT_F3_pingze_sensitivity_20260624.md`](REPORT_F3_pingze_sensitivity_20260624.md) | F3 retrospective 验证：评委对格律敏感度（n=4-5 controlled pair，初步推测）| 2026-06-24 |
 
 完整方法论（公式 / 系数 / 评委 prompt 全文 / 阈值清单）冻结在 [`METHODOLOGY.md`](METHODOLOGY.md) —— 后续代码漂移仍能解释这份报告。
 
