@@ -143,12 +143,12 @@ class PoemScorer:
         im_rule = self._score_imagery(poem)
         co_rule = self._score_theme_cohesion(poem)
         # LLM 评委 4 维（intent/imagery/cohesion/aesthetics）
+        # 评委弃权时 _score_llm_api_4dim 会返 None 维度 → 全部用规则版 / 默认值兜底
         llm_dims = self.score_4dim_via_llm(poem, user_request, adapter)
-        intent_score = llm_dims.get("intent", 0.5)
-        # 4 维 LLM 评分作为主路；规则版仅在 LLM 失败/本地后端时兜底
-        im_score = llm_dims["imagery"]   if llm_dims.get("imagery")    is not None else im_rule
-        co_score = llm_dims["cohesion"]  if llm_dims.get("cohesion")   is not None else co_rule
-        aesthetics = llm_dims["aesthetics"] if llm_dims.get("aesthetics") is not None else 0.5
+        intent_score = llm_dims.get("intent") if llm_dims.get("intent") is not None else 0.5
+        im_score   = llm_dims.get("imagery")   if llm_dims.get("imagery")    is not None else im_rule
+        co_score   = llm_dims.get("cohesion")  if llm_dims.get("cohesion")   is not None else co_rule
+        aesthetics = llm_dims.get("aesthetics") if llm_dims.get("aesthetics") is not None else 0.5
 
         penalty = self._repetition_penalty(poem)
         required_coeff = self._check_required_keywords(poem, user_request, candidate_index)
@@ -232,18 +232,20 @@ class PoemScorer:
                     "aesthetics": dims.get("aesthetics"),
                 }
             except Exception as e:
-                _log.warning("评委 '%s' 评分失败: %s", label, e)
+                _log.warning("评委 '%s' 异常: %s → 评委整体弃权（4 维全 None）", label, e)
                 scores_by_judge[label] = {
-                    "intent": 0.5, "imagery": 0.5,
-                    "cohesion": 0.5, "aesthetics": 0.5,
+                    "intent": None, "imagery": None,
+                    "cohesion": None, "aesthetics": None,
                 }
 
-        # 3. 合成各维度（3+ 评委取中位数；< 3 取均值；遇 None 用规则版兜底）
+        # 3. 合成各维度：弃权评委的 None 维度整个跳过，不污染合成
+        #    （旧版用 0.5 / rule_fallback 顶替 None，让 3 评委里 1 个弃权拉低中位数）
+        #    全员弃权该维度时才退回规则版 / 默认值
         def _aggregate(dim_key, rule_fallback):
-            vals = []
-            for j_scores in scores_by_judge.values():
-                v = j_scores.get(dim_key)
-                vals.append(v if v is not None else rule_fallback)
+            vals = [
+                j_scores[dim_key] for j_scores in scores_by_judge.values()
+                if j_scores.get(dim_key) is not None
+            ]
             if not vals:
                 return rule_fallback
             if len(vals) >= 3:
@@ -412,8 +414,14 @@ class PoemScorer:
     def _score_llm_api_4dim(self, poem, user_request, adapter) -> dict:
         """LLM 评委按 rubric 给 4 维分（intent/imagery/cohesion/aesthetics），归一化到 [0,1]。
 
-        返回 dict 见 _parse_llm_score_reply。失败时返回全 0.5 的 fallback dict。
+        失败语义：
+          · adapter 调用异常 → 全 None dict（让调用方走规则版兜底 / 评委弃权）
+          · 解析失败（reasoning model 返回长 chain-of-thought 无结构化分数）→ 同上
+        旧版在两种失败下都返回全 0.5 dict，会 silently 把"评委弃权"当成"评委打了中位数"，
+        污染 multi-judge 合成 —— 改成 None 让上层显式处理。
         """
+        none_dims = {"intent": None, "imagery": None, "cohesion": None,
+                     "aesthetics": None, "total": None}
         prompt = _SCORING_PROMPT_TEMPLATE.format(user_request=user_request, poem=poem)
         messages = [
             {"role": "system", "content": "你是严格的文学评委，只输出一行逗号分隔的标签值对。"},
@@ -422,16 +430,19 @@ class PoemScorer:
         try:
             reply = adapter.generate(messages, max_tokens=120, temperature=0.1)
             _log.debug("LLM-API 原始返回: %s", reply)
-            parsed = self._parse_llm_score_reply(reply)
-            if parsed is not None:
-                _log.debug("LLM-API 4维: intent=%.2f imagery=%.2f cohesion=%.2f aesthetics=%.2f",
-                          parsed["intent"], parsed["imagery"],
-                          parsed["cohesion"], parsed["aesthetics"])
-                return parsed
         except Exception as e:
-            _log.error("LLM-API 评分失败: %s", e)
-        return {"intent": 0.5, "imagery": 0.5, "cohesion": 0.5,
-                "aesthetics": 0.5, "total": 0.5}
+            _log.warning("LLM-API 评委调用失败: %s → 评委弃权", e)
+            return dict(none_dims)
+
+        parsed = self._parse_llm_score_reply(reply)
+        if parsed is None:
+            _log.warning("LLM-API 评委回复无 4 维分数（可能返回长 reasoning），"
+                         "前 60 字=%r → 评委弃权", (reply or "")[:60])
+            return dict(none_dims)
+        _log.debug("LLM-API 4维: intent=%.2f imagery=%.2f cohesion=%.2f aesthetics=%.2f",
+                   parsed["intent"], parsed["imagery"],
+                   parsed["cohesion"], parsed["aesthetics"])
+        return parsed
 
     @staticmethod
     def _parse_llm_score_reply(reply: str) -> dict | None:
@@ -474,12 +485,9 @@ class PoemScorer:
                 component_norms["aesthetics"] * 0.2
             )
         else:
-            # 兜底：随便找最后一个 0-10 的数
-            nums = [float(n) for n in re.findall(r'\b\d+(?:\.\d+)?\b', text)]
-            candidates = [n for n in nums if 0 <= n <= 10]
-            if not candidates:
-                return None
-            total = candidates[-1] / 10.0
+            # 4 维 + 总分都未匹配 → 解析失败。不再从 reasoning 里"找最后一个 0-10 数字"兜底
+            # （那会把 reasoning model 的长 CoT 里随机一个数字当总分，污染严重）
+            return None
 
         # 缺失维度用 total 兜底（不让单维度查询失败）
         for k in component_norms:
