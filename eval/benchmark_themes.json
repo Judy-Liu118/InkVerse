@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "n": 32,
+  "items": [
+    {
+      "user_input": "写一首春景的五言绝句，要有柳树和燕子",
+      "genre": "五言绝句",
+      "theme": "自然·春",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首七言绝句，主题是春雨",
+      "genre": "七言绝句",
+      "theme": "自然·春",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首春景的五言律诗，要有桃花和啼莺",
+      "genre": "五言律诗",
+      "theme": "自然·春",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首七言律诗，主题是早春",
+      "genre": "七言律诗",
+      "theme": "自然·春",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首五言绝句，主题是夏蝉",
+      "genre": "五言绝句",
+      "theme": "自然·夏",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首夏景的七言绝句，要有荷池和蛙鸣",
+      "genre": "七言绝句",
+      "theme": "自然·夏",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首五言律诗，主题是消夏",
+      "genre": "五言律诗",
+      "theme": "自然·夏",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首夏景的七言律诗，要有竹榻和午梦",
+      "genre": "七言律诗",
+      "theme": "自然·夏",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首秋景的五言绝句，要有菊花和归雁",
+      "genre": "五言绝句",
+      "theme": "自然·秋",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首七言绝句，主题是秋怀",
+      "genre": "七言绝句",
+      "theme": "自然·秋",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首秋景的五言律诗，要有疏桐和寒蛩",
+      "genre": "五言律诗",
+      "theme": "自然·秋",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首七言律诗，主题是悲秋",
+      "genre": "七言律诗",
+      "theme": "自然·秋",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首五言绝句，主题是寒梅",
+      "genre": "五言绝句",
+      "theme": "自然·冬",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首冬景的七言绝句，要有飞雪和寒鸦",
+      "genre": "七言绝句",
+      "theme": "自然·冬",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首五言律诗，主题是雪夜",
+      "genre": "五言律诗",
+      "theme": "自然·冬",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首冬景的七言律诗，要有炉火和寒灯",
+      "genre": "七言律诗",
+      "theme": "自然·冬",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首五言绝句，主题是溪声",
+      "genre": "五言绝句",
+      "theme": "山水",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首山水的七言律诗，要有高楼和远山",
+      "genre": "七言律诗",
+      "theme": "山水",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首田园的七言绝句，要有耕牛和炊烟",
+      "genre": "七言绝句",
+      "theme": "田园",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首五言律诗，主题是归隐",
+      "genre": "五言律诗",
+      "theme": "田园",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首边塞的五言律诗，要有戍楼和角声",
+      "genre": "五言律诗",
+      "theme": "边塞",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首七言绝句，主题是征戍",
+      "genre": "七言绝句",
+      "theme": "边塞",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首羁旅的五言绝句，要有客舍和孤灯",
+      "genre": "五言绝句",
+      "theme": "羁旅",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首七言律诗，主题是客愁",
+      "genre": "七言律诗",
+      "theme": "羁旅",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首七言绝句，主题是送别",
+      "genre": "七言绝句",
+      "theme": "送别",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首送别的七言律诗，要有长亭和折柳",
+      "genre": "七言律诗",
+      "theme": "送别",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首怀古的五言律诗，要有古城和荒台",
+      "genre": "五言律诗",
+      "theme": "怀古",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首七言律诗，主题是吊古",
+      "genre": "七言律诗",
+      "theme": "怀古",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首中秋的五言绝句，要有明月和团圆",
+      "genre": "五言绝句",
+      "theme": "节令",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首五言律诗，主题是重阳",
+      "genre": "五言律诗",
+      "theme": "节令",
+      "keyword_density": "sparse"
+    },
+    {
+      "user_input": "写一首禅意的七言绝句，要有古刹和钟鼓",
+      "genre": "七言绝句",
+      "theme": "哲理",
+      "keyword_density": "rich"
+    },
+    {
+      "user_input": "写一首五言绝句，主题是无常",
+      "genre": "五言绝句",
+      "theme": "哲理",
+      "keyword_density": "sparse"
+    }
+  ]
+}

@@ -50,7 +50,7 @@ from eval.dataset import get_benchmark, BenchInput
 from eval.metrics import summarize, pass_rate
 from eval.report import (
     save_artifacts, table, fmt_num, print_and_return,
-    rank_emoji, bold_max, heatmap_html, wrap_html_doc,
+    rank_emoji, bold_max,
 )
 
 DIMS = ("total", "intent", "imagery", "cohesion", "aesthetics", "pingze", "rhyme")
@@ -741,132 +741,28 @@ def _unique_user_inputs(results_per_model, models):
     return out
 
 
-# ── HTML 报告 ─────────────────────────────────────────────────────────────
+# ── 多 run 支持（Task #61）────────────────────────────────────────────────
 
-def _render_html(args, models, aggs, results_per_model, matchups_per_input):
-    body = []
+def _run_pipeline(args, models: List[str],
+                  judges: List[Tuple[str, ModelAdapter]],
+                  inputs: List[BenchInput], gen: "PoemGenerator",
+                  run_idx: int = 0,
+                  ) -> Tuple[Dict[str, Dict[str, Any]],
+                              Dict[str, List[Dict[str, Any]]],
+                              List[List[Dict[str, Any]]],
+                              List[str]]:
+    """跑一次完整 pipeline（generate → BWS → multi-judge → pairwise → aggregate）。
 
-    # 1. 胜率主表
-    win_headers = ["指标"] + models
-    win_rows = [
-        ["胜率"] + [aggs[m]["win_rate"] for m in models],
-        ["avg local total"] + [aggs[m]["mean_total"]["mean"] for m in models],
-        ["std local total（低=稳）"] + [aggs[m]["std_total"]["mean"] for m in models],
-        ["selection_gain"] + [aggs[m]["selection_gain"]["mean"] for m in models],
-    ]
-    body.append(heatmap_html(
-        "胜率主表（绿=高，红=低；按 0–1 区间）",
-        win_headers, win_rows, cell_min=0.0, cell_max=1.0,
-    ))
-
-    # 2. best 4 维热图
-    dim_rows = []
-    for d in DIMS:
-        dim_rows.append([d] + [aggs[m][d]["mean"] for m in models])
-    body.append(heatmap_html(
-        "best 4 维分（multi-judge）", ["维度"] + models, dim_rows,
-        cell_min=0.0, cell_max=1.0,
-    ))
-
-    # 3. 评委分歧（基于 best）
-    if len(args.scorer) >= 2:
-        for dim_key in ("intent", "imagery", "cohesion", "aesthetics"):
-            diff_headers = ["user_input", "model", "best"] + args.scorer + ["spread"]
-            diff_rows = []
-            for m in models:
-                for r in results_per_model[m]:
-                    bs = r.get("best_scores", {})
-                    sbj = bs.get("scores_by_judge", {})
-                    if not sbj:
-                        continue
-                    per_judge = [sbj.get(j, {}).get(dim_key, 0.0) or 0.0
-                                 for j in args.scorer]
-                    spread = round(max(per_judge) - min(per_judge), 3)
-                    diff_rows.append(
-                        [r["user_input"][:18], m, f"c{(r.get('best_idx', 0))+1}"]
-                        + per_judge + [spread]
-                    )
-            if diff_rows:
-                body.append(heatmap_html(
-                    f"评委分歧 · {dim_key}（spread = max−min；高=争议大）",
-                    diff_headers, diff_rows, cell_min=0.0, cell_max=1.0,
-                ))
-
-    # 4. 全部跨模型对决记录
-    matchup_rows = []
-    for matchups in matchups_per_input:
-        for m in matchups:
-            if m["winner"] == "skip":
-                continue
-            matchup_rows.append([
-                f"{m['model_a']} vs {m['model_b']}",
-                m.get("a_votes", 0),
-                m.get("b_votes", 0),
-                m["winner"],
-            ])
-    if matchup_rows:
-        body.append(heatmap_html(
-            "全部跨模型对决（A 评委票 / B 评委票 / winner）",
-            ["对决", "a_votes", "b_votes", "winner"], matchup_rows,
-            cell_min=0.0, cell_max=3.0,
-        ))
-
-    title = f"eval_poem · {' vs '.join(models)} · n={args.n}"
-    return wrap_html_doc(title, "\n".join(body))
-
-
-# ── 主流程 ────────────────────────────────────────────────────────────────
-
-def main():
-    p = argparse.ArgumentParser(description="诗歌生成质量同台对比（BWS + 跨模型 pairwise）")
-    p.add_argument("--models", nargs="+", default=None,
-                   help="参赛模型列表，如 --models local_base local_lora qwen-plus")
-    p.add_argument("--model-a", default=None, help="（兼容）2 路对比的模型 A")
-    p.add_argument("--model-b", default=None, help="（兼容）2 路对比的模型 B")
-    p.add_argument("--scorer", nargs="+", default=["qwen-plus"],
-                   help="评委 adapter 列表，建议 ≥3 评委跨家族")
-    p.add_argument("--n", type=int, default=20, help="user_input 条数")
-    p.add_argument("--candidates", type=int, default=5, help="每条 user_input 每模型生成多少候选")
-    p.add_argument("--genres", nargs="*", default=None)
-    p.add_argument("--density", choices=["rich", "sparse"], default=None)
-    p.add_argument("--samples", type=int, default=3, help="抽样诗作展示条数")
-    args = p.parse_args()
-
-    # 解析参赛模型
-    if args.models:
-        models = list(args.models)
-    elif args.model_a and args.model_b:
-        models = [args.model_a, args.model_b]
-    else:
-        models = ["local_lora", "qwen-plus"]
-    assert len(models) >= 2, "至少给两个模型才能对比"
-
-    inputs = get_benchmark(n=args.n, genres=args.genres, density=args.density)
-    n_pairs = len(models) * (len(models) - 1) // 2
-    # 调用预估
-    bws_calls = len(inputs) * len(models) * len(args.scorer)
-    multi_judge_calls = len(inputs) * len(models)  # best 1 次 multi-judge ≈ 1 套 LLM 调用
-    pairwise_calls = len(inputs) * n_pairs * len(args.scorer)
-    total_est = bws_calls + multi_judge_calls * len(args.scorer) + pairwise_calls
-    print(f"[eval_poem] {len(inputs)} 条 · {' vs '.join(models)} "
-          f"· 评委={'+'.join(args.scorer)}")
-    print(f"  候选={args.candidates} · 模型对={n_pairs} 对/题")
-    print(f"  调用预估：BWS={bws_calls} + best 4 维≈{multi_judge_calls * len(args.scorer)} "
-          f"+ 跨模型 pairwise={pairwise_calls} ≈ {total_est}")
-
-    judge_clash = set(args.scorer) & set(models)
-    if judge_clash:
-        print(f"  ⚠ 警告：评委 {judge_clash} 同时在参赛队伍里，存在 self-bias 风险")
-
-    gen = PoemGenerator()
-    judges = [(label, _make_adapter(label)) for label in args.scorer]
-
+    抽出来是为支持 --repeat：多 run 时同一组 inputs 在 LLM temperature noise
+    下产生不同候选 / 不同评委判断，跨 run 算 mean ± std。
+    """
     results_per_model: Dict[str, List[Dict[str, Any]]] = {m: [] for m in models}
     matchups_per_input: List[List[Dict[str, Any]]] = []
     input_order: List[str] = []
+    run_tag = f"[run {run_idx + 1}]" if run_idx is not None else ""
 
     for i, item in enumerate(inputs):
-        print(f"  [{i+1}/{len(inputs)}] {item.user_input[:30]}…")
+        print(f"  {run_tag}[{i+1}/{len(inputs)}] {item.user_input[:30]}…")
         input_order.append(item.user_input)
         model_to_result: Dict[str, Dict[str, Any]] = {}
         for m in models:
@@ -891,7 +787,6 @@ def main():
                 results_per_model[m].append(err_r)
                 model_to_result[m] = err_r
 
-        # 跨模型 pairwise（在所有模型跑完这条 input 后做）
         try:
             matchups = _cross_model_pairwise(
                 item, model_to_result, judges, gen.scorer,
@@ -905,23 +800,278 @@ def main():
         m: _aggregate(results_per_model[m], matchups_per_input, m)
         for m in models
     }
+    return aggs, results_per_model, matchups_per_input, input_order
 
-    md   = _render_markdown(args, models, aggs, results_per_model,
-                            matchups_per_input, input_order)
-    html = _render_html(args, models, aggs, results_per_model, matchups_per_input)
+
+# 跨 run mean ± std 聚合的 metric 分类
+_SCALAR_METRICS    = ("win_rate", "judge_consistency_rate")
+_SUMMARY_METRICS   = ("mean_total", "max_total", "min_total", "std_total",
+                       "selection_gain", "pass_rate_07", "diversity") + DIMS
+_RATE_METRICS      = ("pingze_pass@0.8", "rhyme_pass@0.8")
+_INT_METRICS       = ("pairwise_wins", "pairwise_losses", "pairwise_ties",
+                       "pairwise_all_swing", "pairwise_plays")
+
+
+def _aggregate_across_runs(aggs_per_run: List[Dict[str, Dict[str, Any]]],
+                           models: List[str]) -> Dict[str, Dict[str, Any]]:
+    """跨 N 次 run，把每个 metric 算 mean ± std。
+
+    每模型输出 dict 含：
+      · {metric}_runs : List[float]  —— 每 run 的值
+      · {metric}_mean : float        —— 跨 run 均值
+      · {metric}_std  : float        —— 跨 run population std
+      · 整数 metric 额外 {metric}_total : int  —— 跨 run 累计
+    """
+    out: Dict[str, Dict[str, Any]] = {}
+    for m in models:
+        runs = [agg[m] for agg in aggs_per_run]
+        merged: Dict[str, Any] = {"model": m, "n_runs": len(runs)}
+
+        for key in _SCALAR_METRICS + _RATE_METRICS:
+            vals = [r.get(key, 0.0) for r in runs]
+            merged[key + "_runs"] = vals
+            merged[key + "_mean"] = statistics.fmean(vals) if vals else 0.0
+            merged[key + "_std"]  = statistics.pstdev(vals) if len(vals) > 1 else 0.0
+
+        for key in _SUMMARY_METRICS:
+            vals = [
+                r.get(key, {}).get("mean", 0.0) if isinstance(r.get(key), dict)
+                else r.get(key, 0.0)
+                for r in runs
+            ]
+            merged[key + "_runs"] = vals
+            merged[key + "_mean"] = statistics.fmean(vals) if vals else 0.0
+            merged[key + "_std"]  = statistics.pstdev(vals) if len(vals) > 1 else 0.0
+
+        for key in _INT_METRICS:
+            vals = [r.get(key, 0) for r in runs]
+            merged[key + "_runs"]  = vals
+            merged[key + "_mean"]  = statistics.fmean(vals) if vals else 0.0
+            merged[key + "_total"] = sum(vals)
+
+        out[m] = merged
+    return out
+
+
+def _render_markdown_multirun(args, models: List[str],
+                              repeated_aggs: Dict[str, Dict[str, Any]],
+                              runs: List[Dict[str, Any]]) -> str:
+    """跨 N 次 run 的报告（repeat=1 也走这条路径，± std 自动收起）。"""
+    is_repeated = args.repeat > 1
+
+    md: List[str] = []
+    title_tag = " · 多 run mean ± std" if is_repeated else ""
+    md.append(f"# eval_poem 报告 · {' vs '.join(models)}{title_tag}")
+    judge_str = " + ".join(args.scorer)
+    repeat_tag = f" × **{args.repeat} runs**" if is_repeated else ""
+    md.append(
+        f"_n={args.n}（{args.genres or '全部体裁'} / {args.density or '全部密度'}）"
+        f"{repeat_tag} · 评委={judge_str} · 候选数={args.candidates}_"
+    )
+    md.append("")
+    if is_repeated:
+        md.append(
+            "**方法论：** 每 run 完整跑一次 generate → BWS → multi-judge → pairwise pipeline；"
+            f"{args.repeat} 个独立 run 在 LLM temperature noise 下产生不同候选 / 不同评委判断。"
+            "跨 run mean ± std 同时暴露：(1) 模型生成的固有方差 (2) 评委判断的固有方差。"
+        )
+        md.append("")
+        md.append("> 单 run 的候选 dump / pairwise 详情见报告后半（基于 Run 1）。")
+        md.append("")
+
+    headers = ["指标"] + [f"`{m}`" for m in models]
+
+    def _fmt_pm(mean: float, std: float, pct: bool = False, d: int = 3) -> str:
+        if not is_repeated:
+            return f"**{mean:.1%}**" if pct else f"**{mean:.{d}f}**"
+        if pct:
+            return f"**{mean:.1%}** ± {std:.1%}"
+        return f"**{mean:.{d}f}** ± {std:.{d}f}"
+
+    # ── §1 胜率
+    md.append("## 1. 跨模型 pairwise 胜率（mean ± std across runs）")
+    md.append("")
+    rows = []
+    rows.append(["胜率"] + [
+        _fmt_pm(repeated_aggs[m]["win_rate_mean"],
+                repeated_aggs[m]["win_rate_std"])
+        for m in models
+    ])
+    rows.append(["每 run 胜率"] + [
+        ", ".join(f"{v:.3f}" for v in repeated_aggs[m]["win_rate_runs"])
+        for m in models
+    ])
+    rows.append(["累计 胜/平/负/全摇摆"] + [
+        f"{repeated_aggs[m]['pairwise_wins_total']}/"
+        f"{repeated_aggs[m]['pairwise_ties_total']}/"
+        f"{repeated_aggs[m]['pairwise_losses_total']}/"
+        f"{repeated_aggs[m]['pairwise_all_swing_total']}"
+        for m in models
+    ])
+    rows.append(["评委有效胜票占比"] + [
+        _fmt_pm(repeated_aggs[m]["judge_consistency_rate_mean"],
+                repeated_aggs[m]["judge_consistency_rate_std"], pct=True)
+        for m in models
+    ])
+    md.append(table(headers, rows))
+    md.append("")
+
+    # ── §2 候选分布
+    md.append("## 2. 候选分布（mean ± std across runs）")
+    md.append("")
+    rows = []
+    for human, key in (
+        ("avg 候选本地总分",                            "mean_total"),
+        ("std 候选内方差（越低越稳）",                  "std_total"),
+        ("min 候选本地总分（worst-case）",              "min_total"),
+        (f"pass@{POEM_QUALITY_THRESHOLD} 候选合格率",   "pass_rate_07"),
+        ("候选多样性（低=mode collapse）",              "diversity"),
+    ):
+        rows.append([human] + [
+            _fmt_pm(repeated_aggs[m][key + "_mean"],
+                    repeated_aggs[m][key + "_std"])
+            for m in models
+        ])
+    md.append(table(headers, rows))
+    md.append("")
+
+    # ── §3 best 4 维分
+    md.append("## 3. best 4 维分（mean ± std across runs）")
+    md.append("")
+    rows = []
+    for d in DIMS:
+        rows.append([d] + [
+            _fmt_pm(repeated_aggs[m][d + "_mean"],
+                    repeated_aggs[m][d + "_std"])
+            for m in models
+        ])
+    md.append(table(headers, rows))
+    md.append("")
+
+    # ── §4 格律合规
+    md.append("## 4. 格律合规（mean ± std across runs）")
+    md.append("")
+    rows = []
+    for human, key in (("平仄合格率 (≥0.8)", "pingze_pass@0.8"),
+                       ("押韵合格率 (≥0.8)", "rhyme_pass@0.8")):
+        rows.append([human] + [
+            _fmt_pm(repeated_aggs[m][key + "_mean"],
+                    repeated_aggs[m][key + "_std"], pct=True)
+            for m in models
+        ])
+    md.append(table(headers, rows))
+    md.append("")
+
+    # ── §5 各 run 关键指标矩阵（debug 用，看哪 run 偏离）；repeat=1 时无意义
+    if is_repeated:
+        md.append("## 5. 每 run 关键指标")
+        md.append("")
+        rows = []
+        for k in range(args.repeat):
+            rows.append([f"Run {k+1}"] + [
+                (f"胜率 {repeated_aggs[m]['win_rate_runs'][k]:.3f} · "
+                 f"avg {repeated_aggs[m]['mean_total_runs'][k]:.3f} · "
+                 f"pingze {repeated_aggs[m]['pingze_pass@0.8_runs'][k]:.0%}")
+                for m in models
+            ])
+        md.append(table(headers, rows))
+        md.append("")
+
+    return "\n".join(md)
+
+
+# ── 主流程 ────────────────────────────────────────────────────────────────
+
+def main():
+    p = argparse.ArgumentParser(description="诗歌生成质量同台对比（BWS + 跨模型 pairwise）")
+    p.add_argument("--models", nargs="+", default=None,
+                   help="参赛模型列表，如 --models local_base local_lora qwen-plus")
+    p.add_argument("--model-a", default=None, help="（兼容）2 路对比的模型 A")
+    p.add_argument("--model-b", default=None, help="（兼容）2 路对比的模型 B")
+    p.add_argument("--scorer", nargs="+", default=["qwen-plus"],
+                   help="评委 adapter 列表，建议 ≥3 评委跨家族")
+    p.add_argument("--n", type=int, default=20, help="user_input 条数")
+    p.add_argument("--candidates", type=int, default=5, help="每条 user_input 每模型生成多少候选")
+    p.add_argument("--genres", nargs="*", default=None)
+    p.add_argument("--density", choices=["rich", "sparse"], default=None)
+    p.add_argument("--samples", type=int, default=3, help="抽样诗作展示条数")
+    p.add_argument("--repeat", type=int, default=1,
+                   help="重复整 pipeline 跑 N 次，报跨 run mean ± std；"
+                        ">1 时切换多 run 报告格式（Task #61）")
+    args = p.parse_args()
+
+    # 解析参赛模型
+    if args.models:
+        models = list(args.models)
+    elif args.model_a and args.model_b:
+        models = [args.model_a, args.model_b]
+    else:
+        models = ["local_lora", "qwen-plus"]
+    assert len(models) >= 2, "至少给两个模型才能对比"
+    assert args.repeat >= 1, "--repeat 至少为 1"
+
+    inputs = get_benchmark(n=args.n, genres=args.genres, density=args.density)
+    n_pairs = len(models) * (len(models) - 1) // 2
+    # 调用预估（乘以 repeat）
+    bws_calls = len(inputs) * len(models) * len(args.scorer)
+    multi_judge_calls = len(inputs) * len(models)  # best 1 次 multi-judge ≈ 1 套 LLM 调用
+    pairwise_calls = len(inputs) * n_pairs * len(args.scorer)
+    per_run_est = bws_calls + multi_judge_calls * len(args.scorer) + pairwise_calls
+    total_est = per_run_est * args.repeat
+    print(f"[eval_poem] {len(inputs)} 条 × {args.repeat} run · {' vs '.join(models)} "
+          f"· 评委={'+'.join(args.scorer)}")
+    print(f"  候选={args.candidates} · 模型对={n_pairs} 对/题")
+    print(f"  调用预估（单 run）：BWS={bws_calls} + best 4 维≈{multi_judge_calls * len(args.scorer)} "
+          f"+ 跨模型 pairwise={pairwise_calls} ≈ {per_run_est}")
+    if args.repeat > 1:
+        print(f"  调用预估（{args.repeat} run 合计）：≈ {total_est}")
+
+    judge_clash = set(args.scorer) & set(models)
+    if judge_clash:
+        print(f"  ⚠ 警告：评委 {judge_clash} 同时在参赛队伍里，存在 self-bias 风险")
+
+    gen = PoemGenerator()
+    judges = [(label, _make_adapter(label)) for label in args.scorer]
+
+    # 跑 args.repeat 次完整 pipeline，跨 run 聚合（repeat=1 是合法特例）
+    runs: List[Dict[str, Any]] = []
+    for k in range(args.repeat):
+        if args.repeat > 1:
+            print(f"\n========== Run {k+1}/{args.repeat} ==========")
+        aggs_k, rpm_k, mpi_k, io_k = _run_pipeline(
+            args, models, judges, inputs, gen, run_idx=k,
+        )
+        runs.append({
+            "aggs":               aggs_k,
+            "results_per_model":  rpm_k,
+            "matchups_per_input": mpi_k,
+            "input_order":        io_k,
+        })
+
+    repeated_aggs = _aggregate_across_runs([r["aggs"] for r in runs], models)
+
+    # 跨 run 摘要 + Run 1 详细报告（候选 dump / pairwise 等单 run 视角信息）
+    summary_md = _render_markdown_multirun(args, models, repeated_aggs, runs)
+    run1_md = _render_markdown(
+        args, models, runs[0]["aggs"], runs[0]["results_per_model"],
+        runs[0]["matchups_per_input"], runs[0]["input_order"],
+    )
+    detail_title = (
+        f"# Run 1 详细报告（候选 dump / pairwise 详情）" if args.repeat > 1
+        else "# 详细报告（候选 dump / pairwise 详情）"
+    )
+    md = summary_md + f"\n\n---\n\n{detail_title}\n\n" + run1_md
+
     payload = {
-        "config": vars(args),
-        "models": models,
-        "aggs": aggs,
-        "results_per_model": results_per_model,
-        "matchups_per_input": matchups_per_input,
-        "input_order": input_order,
+        "config":        vars(args),
+        "models":        models,
+        "repeated_aggs": repeated_aggs,
+        "runs":          runs,
     }
-    print_and_return(md)
-    paths = save_artifacts("eval_poem", payload, md, html=html)
+    print_and_return(summary_md)  # 控制台只 print 跨 run 摘要
+    paths = save_artifacts("eval_poem", payload, md)
     print(f"原始数据: {paths['json']}")
     print(f"Markdown: {paths['md']}")
-    print(f"HTML 热图: {paths['html']}")
 
 
 if __name__ == "__main__":
