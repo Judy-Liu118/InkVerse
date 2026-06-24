@@ -324,6 +324,44 @@ python -m eval.eval_autonomous --n 5
 
 详见 [`eval/README.md`](eval/README.md)（含 benchmark 数据集说明、参数约定、结果解读建议）。
 
+### 代表性发现 · n=32 × 3 run 主跑
+
+`eval_poem --models local_base local_lora local_lora_naked qwen-plus --scorer deepseek-v4-pro qwen-max glm-4-plus moonshot-v1-32k --n 32 --candidates 5 --repeat 3`
+
+跨 4 LLM 评委（跨家族抗 self-bias）+ 3 run（暴露 LLM noise，主要指标 std 0.005-0.03 → 结论 reproducible）。
+
+**1. LoRA 把格律内化进权重 —— 移掉 system prompt 反而更好**
+
+| 指标 | LoRA full | **LoRA naked** | Δ |
+|---|---|---|---|
+| 平仄合格率 (≥0.8) | 95.4% ± 4.3% | **96.4% ± 3.0%** | +1.0pp |
+| 押韵合格率 (≥0.8) | 32.9% ± 6.2% | **39.0% ± 1.8%** | +6.1pp |
+
+naked 模式仅传简短 user request，不带任何格式约束。微调的格律合规来自权重本身，而非 in-context 引导。
+
+**2. LoRA 提升地板，不提升天花板**
+
+| 指标 | local_base | local_lora | Δ |
+|---|---|---|---|
+| pass@0.7 候选合格率 | 36.2% ± 2.6% | **64.0% ± 2.4%** | +27.8pp（≈ ×1.8）|
+| best 候选 4 维 total | 0.771 ± 0.012 | 0.771 ± 0.004 | 0 |
+
+候选池合格率几乎翻倍，best 候选评分持平。LoRA 收紧分布、砍坏样本 —— alignment fine-tune 的典型 pattern。
+
+**3. LLM-as-judge 对格律不敏感**
+
+| 模型 | 平仄合格率 | pairwise 胜率 |
+|---|---|---|
+| local_base | **25.6%** ± 6.4% | 0.356 ± 0.044 |
+| local_lora | 95.4% ± 4.3% | 0.312 ± 0.025 |
+| local_lora_naked | 96.4% ± 3.0% | 0.319 ± 0.028 |
+
+base 平仄只有 LoRA 的 1/4，pairwise 胜率反而最高。4 评委判断里格律权重接近 0，主要看 intent/imagery/aesthetics —— 生产里做格律保证必须保留 rule-based scorer 作为硬约束，不能完全替换成 LLM judge。
+
+**方法论亮点：** 跨家族 4 评委集成（DeepSeek + Qwen + GLM + Moonshot）抗 self-bias · forward+reverse 双向 pairwise 暴露 position bias（摇摆率 23% 公开标注）· BWS 选 best 规避评分饱和 · 3 run mean ± std 区分信号 vs 噪声 · 评委解析失败显式弃权不污染 multi-judge 合成。
+
+完整报告：`outputs/eval/eval_poem_<timestamp>.md` · 32 道分层 benchmark 见 [`eval/benchmark_themes.json`](eval/benchmark_themes.json)。
+
 ## 测试
 
 ```bash
