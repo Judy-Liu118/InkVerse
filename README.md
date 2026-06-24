@@ -305,10 +305,11 @@ state = reg.execute("plan", state)      # 按名调度
 `eval/` 目录提供 4 个独立可跑的评估脚本，用于量化项目里的核心设计点：
 
 ```bash
-# 1. 诗歌生成模型质量对比（LoRA vs API）
-python -m eval.eval_poem --model-a local_lora --model-b qwen-plus --n 10
+# 1. 诗歌生成模型质量对比（BWS + 跨家族多评委 pairwise，支持 --repeat 多 run）
+python -m eval.eval_poem --models local_lora qwen-plus \
+    --scorer qwen-max glm-4-plus --n 10
 
-# 2. 双锚点 CLIP vs 单锚点（项目核心创新）
+# 2. 双锚点 CLIP vs 单锚点（项目核心创新；含 VLM ground truth）
 python -m eval.eval_clip --n 10
 
 # 3. 自动方向性诗评 + refine_poem 的提升幅度
@@ -317,6 +318,8 @@ python -m eval.eval_refine --n 10
 # 4. 全自主模式 vs 单轮模式 CLIP 终值 + 耗时对比
 python -m eval.eval_autonomous --n 5
 ```
+
+完整方法论（公式 / 系数 / 评委 prompt / 阈值）见 [`eval/METHODOLOGY.md`](eval/METHODOLOGY.md) —— 该文档冻结当前 commit 的实验方法，保证后续代码漂移仍能解释历史报告。
 
 每次跑完会在 `outputs/eval/` 下落两份产物：
 - `<name>_<timestamp>.json` —— 原始数据，便于二次分析
