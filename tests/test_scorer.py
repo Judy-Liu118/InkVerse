@@ -214,8 +214,12 @@ def test_multi_judge_empty_raises(scorer):
                                          "any", [])
 
 
-def test_multi_judge_failing_judge_falls_back_to_0_5(scorer):
-    """一个 judge 抛异常时降级为 0.5，不阻断流程。"""
+def test_multi_judge_failing_judge_abstains(scorer):
+    """一个 judge 抛异常时整体弃权（4 维 None），合成时跳过，不阻断流程也不污染均值。
+
+    fb19f43 后语义：弃权评委的 None 维度被跳过，不再用 0.5 顶替。
+    所以 ok=1.0、fail 弃权 → intent 合成 = 1.0（不是 0.75）。
+    """
     poem = "春风吹柳舞\n燕子归巢忙\n桃花笑水落\n人间四月天"
     judge_ok   = _fake_judge_4dim(intent=3, imagery=3, cohesion=2, aesthetics=2)
     judge_fail = MagicMock()
@@ -224,5 +228,62 @@ def test_multi_judge_failing_judge_falls_back_to_0_5(scorer):
     result = scorer.score_single_multi_judge(
         poem, "春诗", [("ok", judge_ok), ("fail", judge_fail)],
     )
-    # ok 给 1.0；fail 兜底到 0.5；均值 0.75
-    assert abs(result["intent"] - 0.75) < 1e-3
+    # ok=1.0；fail 弃权 → 跳过；intent_final = 1.0
+    assert abs(result["intent"] - 1.0) < 1e-3
+    # 弃权评委 intent_by_judge 字段为 None（不是 round 后的 0）
+    assert result["scores_by_judge"]["fail"]["intent"] is None
+    assert result["scores_by_judge"]["ok"]["intent"] == 1.0
+
+
+# ── arena_from_gated 边界：champion["final"] KeyError 防回归 ────────────────
+def _fake_pairwise_adapter(winner: str = "A"):
+    adapter = MagicMock()
+    adapter.generate.return_value = winner
+    return adapter
+
+
+def _gated_entry(idx: int, total: float, poem: str = "春风吹柳舞\n燕子归巢忙\n桃花笑水落\n人间四月天"):
+    """构造 arena_from_gated 期望的 gated 项形状。"""
+    return {
+        "idx": idx,
+        "poem": poem,
+        "local": {
+            "total": total,
+            "pingze": 0.9, "rhyme": 0.9, "imagery": 0.8,
+            "cohesion": 0.8, "topic": 0.6,
+        },
+    }
+
+
+def test_arena_from_gated_single_candidate_returns_final(scorer):
+    """gated 只有 1 首：top_n=1，pairs=[]，champion 字段不应抛 KeyError。"""
+    gated = [_gated_entry(0, total=0.80)]
+    result = scorer.arena_from_gated(gated, "春景", _fake_pairwise_adapter())
+    assert result["champion_idx"] == 0
+    assert isinstance(result["champion_final"], float)
+    # 单首：arena_score=0/0 fallback=0，final = local*0.75 + 0 = 0.6
+    assert result["champion_final"] == pytest.approx(0.80 * 0.75, abs=1e-6)
+
+
+def test_arena_from_gated_two_candidates_returns_final(scorer):
+    """gated 长度 2：top_n=2，pairs=[(0,1)]，两条都被赋 final。"""
+    gated = [_gated_entry(0, total=0.85), _gated_entry(1, total=0.80)]
+    result = scorer.arena_from_gated(gated, "春景", _fake_pairwise_adapter(winner="A"))
+    assert result["champion_idx"] == 0
+    assert isinstance(result["champion_final"], float)
+
+
+def test_arena_from_gated_more_than_top_n_no_keyerror(scorer):
+    """gated 长度 5 > top_n=3：只有前 3 被赋 final，第 4-5 走 sort .get fallback；
+    champion 字段访问必须有兜底，不能 KeyError。"""
+    gated = [
+        _gated_entry(0, total=0.85),
+        _gated_entry(1, total=0.80),
+        _gated_entry(2, total=0.78),
+        _gated_entry(3, total=0.70),
+        _gated_entry(4, total=0.65),
+    ]
+    result = scorer.arena_from_gated(gated, "春景", _fake_pairwise_adapter(winner="A"))
+    # 不论 champion 落在 idx 0..4 哪个，结果都得有 champion_final（float）
+    assert isinstance(result["champion_final"], float)
+    assert result["gated_count"] == 5

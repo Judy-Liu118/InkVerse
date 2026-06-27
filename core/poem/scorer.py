@@ -287,8 +287,11 @@ class PoemScorer:
         final_total = art_quality * req_c
 
         # 6. 兼容旧字段 intent_by_judge：只放 intent 一维（向后兼容 eval_poem 渲染）
-        intent_by_judge = {label: round(s["intent"], 3)
-                           for label, s in scores_by_judge.items()}
+        #    弃权评委 intent=None；这里保留 None 别 round（fb19f43 引入弃权语义后才暴露的边界）
+        intent_by_judge = {
+            label: (round(s["intent"], 3) if s["intent"] is not None else None)
+            for label, s in scores_by_judge.items()
+        }
 
         return {
             "total":          round(final_total, 3),
@@ -1018,9 +1021,12 @@ C. 明显缺失的要素（若无请写"无"）："""
                    reverse=True)
         champion = gated[0]
         backup = gated[1] if len(gated) > 1 else gated[0]
+        # 边界兜底：champion 可能落在 gated[top_n:]（未进 arena），此时无 "final" key。
+        # 用 local total 当 fallback —— 这就是 sort 时 .get 已经默认的语义。
+        champion_final = champion.get("final", champion["local"]["total"])
 
         _log.info("=" * 60)
-        _log.info("【🏆 冠军】诗%d 综合=%.3f", champion["idx"] + 1, champion["final"])
+        _log.info("【🏆 冠军】诗%d 综合=%.3f", champion["idx"] + 1, champion_final)
         for line in champion["poem"].strip().split('\n'):
             _log.info("  %s", line.strip())
         _log.info("=" * 60)
@@ -1030,7 +1036,7 @@ C. 明显缺失的要素（若无请写"无"）："""
             "champion_idx": champion["idx"],
             "champion_topic": champion["local"]["topic"],
             "champion_local_total": champion["local"]["total"],
-            "champion_final": champion["final"],
+            "champion_final": champion_final,
             "gated_count": len(gated),
             "backup": backup["poem"],
             "backup_idx": backup["idx"],
@@ -1154,9 +1160,11 @@ C. 明显缺失的要素（若无请写"无"）："""
         gated.sort(key=lambda x: x.get("final", x["local"]["total"]), reverse=True)
         champion = gated[0]
         backup = gated[1] if len(gated) > 1 else gated[0]
+        # 边界兜底：参见 arena_from_gated 同处注释
+        champion_final = champion.get("final", champion["local"]["total"])
 
         _log.info("=" * 60)
-        _log.info("【🏆 冠军】诗%d 综合=%.3f", champion["idx"] + 1, champion["final"])
+        _log.info("【🏆 冠军】诗%d 综合=%.3f", champion["idx"] + 1, champion_final)
         for line in champion["poem"].strip().split('\n'):
             _log.info("  %s", line.strip())
         _log.info("=" * 60)
@@ -1166,7 +1174,7 @@ C. 明显缺失的要素（若无请写"无"）："""
             "champion_idx": champion["idx"],
             "champion_topic": champion["local"]["topic"],
             "champion_local_total": champion["local"]["total"],
-            "champion_final": champion["final"],
+            "champion_final": champion_final,
             "gated_count": len(gated),
             "backup": backup["poem"],
             "backup_idx": backup["idx"],
