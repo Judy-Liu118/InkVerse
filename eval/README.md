@@ -18,6 +18,7 @@
 - `analyze_clip_dual.py` —— 对 eval_clip JSON 做 dual 锚点合理性分析（α grid search + 锚点互补性）
 - `analyze_judge_pingze_sensitivity.py` —— 对 eval_poem JSON 做 F3 retrospective 分析（按 pingze 差分桶 + controlled pair + winner 切片）
 - `build_classics_benchmark.py` —— 构造 15 首唐诗名作 benchmark 供 eval_clip 复用
+- `build_f3_controlled.py` —— **构造 F3 controlled pair 池**（base 严重出律 + 意境 ≥ lora），把 anecdote (n=4) 推向 n=64+ 强结论；脚本支持 `--dry-run` 验证拓扑，真跑约 1-2hr API
 - `dataset.py` —— 主 benchmark 题源 + `--dump` 导出 `benchmark_themes.json`
 
 ## 主跑命令（n=32 × 3 run · 12h overnight）
