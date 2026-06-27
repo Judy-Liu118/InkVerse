@@ -28,7 +28,7 @@ from config import (
 # 初始化日志系统
 setup_logging()
 
-_ROOT          = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.dirname(os.path.abspath(__file__))
 LAST_IMAGE_PATH = os.path.join(_ROOT, "outputs", "last_image.png")
 IMAGE_HISTORY_DIR = os.path.join(_ROOT, "outputs", "image_history")
 os.makedirs(os.path.dirname(LAST_IMAGE_PATH), exist_ok=True)
@@ -533,6 +533,7 @@ def on_autonomous_create(
     auto_max_poem_rounds: int,
     auto_image_mode_val: str = "改写重生图（LLM 改写 Prompt 后重新生图）",
     auto_edit_model_val: str = "",
+    auto_llm_driven_loop: bool = False,
 ):
     """
     全自主创作模式：Agent 自主完成生成→图像优化→改诗→重生图的完整循环，
@@ -572,6 +573,7 @@ def on_autonomous_create(
         max_poem_refine_rounds   = int(auto_max_poem_rounds),
         image_improve_mode       = _img_mode,
         edit_model               = auto_edit_model or IMAGE_EDIT_DEFAULT_MODEL,
+        image_loop_llm_driven    = bool(auto_llm_driven_loop),
     )
 
     # 启动提示
@@ -1036,6 +1038,12 @@ with gr.Blocks(
                 label="自主图像编辑模型",
                 interactive=True,
             )
+            auto_llm_driven_loop = gr.Checkbox(
+                value=False,
+                label="LLM 驱动改图循环（实验）",
+                info="勾选后改图循环由 LLM 决定调 edit_image / refine_poem_and_regen / stop；默认走写死流程。",
+                interactive=True,
+            )
             auto_btn = gr.Button("🤖 全自主创作", variant="primary", elem_id="auto-btn")
 
             gr.HTML('<div id="seal">詩<br>畫<br>工坊</div>')
@@ -1195,7 +1203,7 @@ with gr.Blocks(
             image_backend,
             auto_target_score, auto_max_img_rounds,
             auto_allow_poem_refine, auto_max_poem_rounds,
-            auto_image_mode, auto_edit_model,
+            auto_image_mode, auto_edit_model, auto_llm_driven_loop,
         ],
         outputs=_auto_shared_outputs,
         concurrency_limit=1,

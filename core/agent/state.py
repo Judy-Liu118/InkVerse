@@ -124,6 +124,10 @@ class AgentState:
     error:        str               = ""
     retry_counts: Dict[str, int]    = field(default_factory=dict)
 
+    # LLM-driven 改图循环每轮决策的结构化记录（eval 诚实性指标用，不进 trace）。
+    # 字段: round, tool, is_fallback, score_before, score_after, stale_override
+    llm_loop_decisions: List[Dict] = field(default_factory=list)
+
     def log(
         self,
         phase:    str,

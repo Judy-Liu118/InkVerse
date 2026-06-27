@@ -194,6 +194,17 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
                     state.log("自主模式", "⚠ controller fallback",
                               decision.get("reasoning", ""))
 
+                # 诚实性指标埋点：每轮决策结构化落盘
+                decision_record = {
+                    "round": img_round + 1,
+                    "tool": tool_name,
+                    "is_fallback": bool(decision.get("_fallback")),
+                    "score_before": prev_round_score,
+                    "score_after": None,
+                    "stale_override": False,
+                }
+                state.llm_loop_decisions.append(decision_record)
+
                 state, should_stop = controller.dispatch(decision, state)
                 history.append(
                     f"{tool_name}: {decision.get('feedback') or decision.get('reason') or ''}"
@@ -208,6 +219,7 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
                     break
 
                 round_score = agent._raw_clip(state)
+                decision_record["score_after"] = round_score
                 state.log("自主模式",
                           f"LLM 改图：第 {img_round + 1} 轮完成",
                           f"CLIP raw={round_score:.3f}")
@@ -224,6 +236,7 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
 
                 # 启发式护栏：即使 LLM 不喊 stop，也尊重 stale 阈值
                 if config.adaptive_stop and stale_count >= 2:
+                    decision_record["stale_override"] = True
                     state.log("自主模式", "自适应停止（覆盖 LLM 决策）",
                               f"连续 {stale_count} 轮 CLIP 无显著提升，强制退出")
                     break
