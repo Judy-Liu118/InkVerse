@@ -9,7 +9,9 @@ import pytest
 from PIL import Image
 
 from eval.vlm_judge import (
-    VLMJudge, VLMVerdict, _parse_verdict, _image_to_data_url, _resolve_backend,
+    VLMJudge, VLMVerdict, VLMComparison,
+    _parse_verdict, _parse_winner,
+    _image_to_data_url, _resolve_backend,
 )
 
 
@@ -170,3 +172,100 @@ def test_verdict_as_dict_roundtrip():
     d = v.as_dict()
     assert d == {"score": 0.6, "raw_score": 6.0, "reasoning": "r",
                  "model": "m", "error": None}
+
+
+# ── _parse_winner ─────────────────────────────────────────────────────────
+def test_parse_winner_bare_json_A():
+    c = _parse_winner('{"winner": "A", "reasoning": "意象到位"}', model="m")
+    assert c.error is None
+    assert c.winner == "A"
+    assert c.reasoning == "意象到位"
+
+
+def test_parse_winner_bare_json_B():
+    c = _parse_winner('{"winner": "B", "reasoning": "x"}', model="m")
+    assert c.error is None and c.winner == "B"
+
+
+def test_parse_winner_tie_normalized():
+    c = _parse_winner('{"winner": "TIE", "reasoning": "x"}', model="m")
+    assert c.error is None and c.winner == "tie"
+
+
+def test_parse_winner_markdown_fenced():
+    raw = '```json\n{"winner": "A", "reasoning": "ok"}\n```'
+    c = _parse_winner(raw, model="m")
+    assert c.error is None and c.winner == "A"
+
+
+def test_parse_winner_via_regex_when_json_broken():
+    """JSON 解析失败但从文字里抓到 winner → 仍可用"""
+    raw = "我倾向于 winner: A，因为意象更全"
+    c = _parse_winner(raw, model="m")
+    assert c.error is None and c.winner == "A"
+
+
+def test_parse_winner_unknown_label_returns_error():
+    c = _parse_winner('{"winner": "C", "reasoning": "x"}', model="m")
+    assert c.winner is None and c.error is not None
+
+
+def test_parse_winner_missing_field_returns_error():
+    c = _parse_winner('{"reasoning": "no winner"}', model="m")
+    assert c.winner is None and c.error is not None
+
+
+def test_parse_winner_empty_returns_error():
+    c = _parse_winner("", model="m")
+    assert c.winner is None and c.error == "empty response"
+
+
+# ── VLMJudge.compare 端到端（注入 stub client）────────────────────────────
+def test_judge_compare_success_path():
+    judge = _make_judge(raw_text='{"winner": "B", "reasoning": "B 留白更佳"}')
+    img_a = Image.new("RGB", (8, 8), color=(0, 0, 0))
+    img_b = Image.new("RGB", (8, 8), color=(255, 255, 255))
+    c = judge.compare(image_a=img_a, image_b=img_b,
+                      poem="春风又绿江南岸", visual_keywords_en="spring breeze")
+    assert c.error is None
+    assert c.winner == "B"
+
+    # multimodal content 形状校验：两张 image_url + 一段 text
+    msgs = judge._client.last_messages
+    user_msg = msgs[-1]
+    assert user_msg["role"] == "user"
+    types = [p["type"] for p in user_msg["content"]]
+    assert types.count("image_url") == 2
+    assert "text" in types
+    text_part = next(p for p in user_msg["content"] if p["type"] == "text")
+    assert "春风又绿江南岸" in text_part["text"]
+
+
+def test_judge_compare_api_error_wrapped():
+    judge = _make_judge(raise_exc=RuntimeError("rate limit"))
+    img = Image.new("RGB", (8, 8))
+    c = judge.compare(image_a=img, image_b=img, poem="x", visual_keywords_en="y")
+    assert c.winner is None
+    assert "rate limit" in c.error
+
+
+def test_judge_compare_none_image_returns_error_no_api_call():
+    judge = _make_judge(raw_text='{"winner": "A"}')
+    img = Image.new("RGB", (8, 8))
+    c = judge.compare(image_a=None, image_b=img, poem="x")
+    assert c.winner is None
+    assert c.error == "image_a or image_b is None"
+    assert judge._client.calls == 0
+
+
+def test_judge_compare_unparseable_response_returns_error():
+    judge = _make_judge(raw_text="garbage with no winner key")
+    img = Image.new("RGB", (8, 8))
+    c = judge.compare(image_a=img, image_b=img, poem="x")
+    assert c.winner is None and c.error is not None
+
+
+def test_comparison_as_dict_roundtrip():
+    c = VLMComparison(winner="A", reasoning="r", model="m", error=None)
+    d = c.as_dict()
+    assert d == {"winner": "A", "reasoning": "r", "model": "m", "error": None}

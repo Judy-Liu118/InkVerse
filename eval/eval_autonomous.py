@@ -170,32 +170,23 @@ def _run_autonomous_full(
     if llm_driven:
         out["llm_metrics"] = _count_llm_metrics(final)
     if vlm_judge is not None and first_image is not None and final.image is not None:
-        # 改图前 vs 改图后：跑两次 VLM 单图打分，外部 ground truth（不是 loop 的优化目标）
+        # 改图前 vs 改图后：pairwise 比较（外部 ground truth；不是 loop 的优化目标）
+        # 比 score()×2 高分辨率：单图 0-10 评分对零差异不敏感（before/after 同分
+        # 极常见），pairwise 必须做出 A/B/tie 三选一。
+        # A = before（first_image），B = after（final.image）。
         try:
-            v_before = vlm_judge.score(
-                image=first_image, poem=final.poem,
-                visual_keywords_en=final.visual_keywords_en or "",
-            )
-            v_after = vlm_judge.score(
-                image=final.image, poem=final.poem,
+            cmp = vlm_judge.compare(
+                image_a=first_image, image_b=final.image,
+                poem=final.poem,
                 visual_keywords_en=final.visual_keywords_en or "",
             )
             out["vlm"] = {
-                "model":           vlm_judge.model,
-                "before_raw":      v_before.raw_score,
-                "after_raw":       v_after.raw_score,
-                "before_error":    v_before.error,
-                "after_error":     v_after.error,
-                "after_better":    (
-                    v_after.raw_score > v_before.raw_score
-                    if v_before.raw_score is not None and v_after.raw_score is not None
-                    else None
-                ),
-                "delta_raw":       (
-                    v_after.raw_score - v_before.raw_score
-                    if v_before.raw_score is not None and v_after.raw_score is not None
-                    else None
-                ),
+                "model":        vlm_judge.model,
+                "method":       "pairwise",
+                "winner":       cmp.winner,      # "A"=before / "B"=after / "tie" / None
+                "after_better": (cmp.winner == "B") if cmp.winner else None,
+                "reasoning":    cmp.reasoning,
+                "error":        cmp.error,
             }
         except Exception as e:
             out["vlm"] = {"error": f"vlm pipeline: {e}"}
@@ -417,36 +408,34 @@ def _render_report(args, rows):
             md.append("_无决策数据可统计_\n")
 
     # ─── 第 6 节：VLM 独立裁判（破 CLIP 循环论证）────────────────────────
-    md.append("## 6. VLM 独立裁判：改图前 vs 改图后")
+    md.append("## 6. VLM 独立裁判：改图前 vs 改图后（pairwise）")
     md.append("> 改图循环的优化目标是 CLIP-final，再拿 CLIP-final 当成功指标是部分同义反复。")
-    md.append("> 这一节用 VLM（loop 外裁判）直接评 before-image vs after-image，分数与 loop 优化目标解耦。")
+    md.append("> 这一节用 VLM（loop 外裁判）直接 pairwise 判定 before vs after，分数与 loop 优化目标解耦。")
+    md.append("> A = before（改图前首图），B = after（final 图）。")
     md.append("")
 
     def _vlm_arm_stats(rows, arm_key):
-        vlm_pairs = []
+        verdicts = []
         for r in rows:
             arm = r.get(arm_key, {})
             if "error" in arm or "vlm" not in arm:
                 continue
             v = arm["vlm"]
-            if "error" in v:
+            if v.get("error") or v.get("winner") is None:
                 continue
-            if v.get("before_raw") is None or v.get("after_raw") is None:
-                continue
-            vlm_pairs.append(v)
-        if not vlm_pairs:
+            verdicts.append(v)
+        if not verdicts:
             return None
-        deltas = [v["delta_raw"] for v in vlm_pairs]
-        better_count = sum(1 for v in vlm_pairs if v["after_better"])
-        tie_count = sum(1 for v in vlm_pairs if v["delta_raw"] == 0)
-        d_stat = summarize(deltas)
+        a_count = sum(1 for v in verdicts if v["winner"] == "A")  # before 赢
+        b_count = sum(1 for v in verdicts if v["winner"] == "B")  # after 赢
+        tie_count = sum(1 for v in verdicts if v["winner"] == "tie")
+        n = len(verdicts)
         return {
-            "n":            len(vlm_pairs),
-            "after_better": better_count,
+            "n":            n,
+            "after_better": b_count,         # B = after
+            "before_better": a_count,        # A = before
             "tie":          tie_count,
-            "better_rate":  better_count / len(vlm_pairs),
-            "mean_delta":   d_stat["mean"],
-            "median_delta": d_stat["median"],
+            "better_rate":  b_count / n,
         }
 
     vlm_au = _vlm_arm_stats(rows, "autonomous")
@@ -457,20 +446,19 @@ def _render_report(args, rows):
         def _row(arm, stats):
             if stats is None:
                 return [arm, "—", "—", "—", "—", "—"]
-            return [arm, stats["n"], stats["after_better"],
-                    f"{stats['better_rate']:.1%}",
-                    fmt_num(stats["mean_delta"], 3),
-                    fmt_num(stats["median_delta"], 3)]
+            return [arm, stats["n"], stats["after_better"], stats["before_better"],
+                    stats["tie"], f"{stats['better_rate']:.1%}"]
         md.append(table(
-            ["臂", "n", "after_better", "after 更优比例", "mean Δ(raw 0-10)", "median Δ"],
+            ["臂", "n", "after 赢", "before 赢", "tie", "after 更优比例"],
             [_row("autonomous(fixed)", vlm_au), _row("autonomous(llm)", vlm_al)],
         ))
         md.append("")
         md.append(
             "**解读**：after 更优比例 = VLM 判定改图后图更契合诗的样本占比。"
             "这是**非 CLIP 的成功率数字**：成功指标不再是 loop 自己在爬的那个数。"
-            "若该比例远低于 50% 或 mean Δ ≤ 0，说明改图循环按 CLIP 在涨，但外部 oracle 看不到收益 —— "
-            "提示 CLIP 在中文诗 + 水墨域可能存在过拟合到 reward 的失败模式。"
+            "若该比例远低于 50%（且 tie 占比未压倒一切），说明改图循环按 CLIP 在涨但外部 oracle "
+            "看不到收益 —— 是 CLIP 在中文诗 + 水墨域存在 reward hacking 嫌疑的信号。"
+            "pairwise 比 score()×2 高分辨率，但仍受 LLM bias / position bias 影响，强结论需 forward+reverse 双向跑。"
         )
         md.append("")
 
@@ -482,14 +470,15 @@ def _render_report(args, rows):
             continue
         md.append(f"### {r['user_input']}")
         md.append(f"- single_pass:     CLIP={fmt_num(sp['clip_raw'])}, {sp['elapsed_sec']}s")
-        au_extra = ""
-        if "vlm" in au and "error" not in au["vlm"] and au["vlm"].get("delta_raw") is not None:
-            au_extra = f", VLM Δ={fmt_num(au['vlm']['delta_raw'], 2)}"
+        def _vlm_tag(arm):
+            v = arm.get("vlm") or {}
+            if not v or v.get("error") or v.get("winner") is None:
+                return ""
+            return f", VLM={v['winner']}"  # A=before / B=after / tie
+        au_extra = _vlm_tag(au)
         md.append(f"- autonomous:      CLIP={fmt_num(au['clip_raw'])}, {au['elapsed_sec']}s, "
                   f"改图 {au['rounds']['image_rounds']} 轮, 改诗 {au['rounds']['poem_rounds']} 轮{au_extra}")
-        al_extra = ""
-        if "vlm" in al and "error" not in al["vlm"] and al["vlm"].get("delta_raw") is not None:
-            al_extra = f", VLM Δ={fmt_num(al['vlm']['delta_raw'], 2)}"
+        al_extra = _vlm_tag(al)
         md.append(f"- autonomous_llm:  CLIP={fmt_num(al['clip_raw'])}, {al['elapsed_sec']}s, "
                   f"改图 {al['rounds']['image_rounds']} 轮, "
                   f"fallback={al.get('llm_metrics',{}).get('fallback_count',0)}/"
