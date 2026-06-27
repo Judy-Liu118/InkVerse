@@ -43,6 +43,9 @@ class AutonomousConfig:
     # 自适应停止参数
     adaptive_stop:            bool  = True   # 是否启用自适应停止
     adaptive_stop_delta:      float = 0.01   # 连续无提升的 delta 阈值
+    # LLM-driven 改图循环：把 state + tool schema 喂 LLM，由 LLM 决定调用
+    # edit_image / refine_poem_and_regen / stop（默认关，向后兼容写死流程）
+    image_loop_llm_driven:    bool  = False
 
 
 def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = None):
@@ -143,59 +146,139 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
     yield state
 
     # ═════════════════════════════════════════════════════════════════════
-    # CLIP 门控：纯改图循环（不再触碰诗歌）
+    # CLIP 门控：改图循环（写死流程 vs LLM-driven 控制器）
     # ═════════════════════════════════════════════════════════════════════
     stale_count = 0       # 连续无提升计数器（自适应停止）
     prev_round_score = None  # 上一轮分数，None 表示首轮（不计入 stale）
-    for img_round in range(config.max_image_improve_rounds):
-        if best_score >= target:
-            state.log("自主模式", "改图循环·提前达标",
-                      f"CLIP raw={best_score:.3f} ≥ {target}，跳过剩余改图轮次")
-            break
 
-        # 编辑强度衰减：越往后越微调（0.75 → 0.50），防止灾难性遗忘前期特征
-        decay_strength = max(0.50, 0.75 - img_round * 0.12)
-        # 每轮从最优图出发改，而不是从上一轮可能改砸的图出发
-        if best_state is not state:
-            state.image = best_state.image
-            state.clip_score_final = best_state.clip_score_final
-        state.log("自主模式", f"改图循环：第 {img_round + 1} 轮",
-                  f"当前 raw={best_score:.3f}，调用 autonomous_improve_image…（强度={decay_strength:.2f}）")
-        state = agent.autonomous_improve_image(
-            state,
-            image_mode=config.image_improve_mode,
-            edit_model=getattr(config, "edit_model", "wanx2.1-imageedit"),
-            edit_strength=decay_strength,
-        )
-        round_score = agent._raw_clip(state)
-        state.log("自主模式", f"改图循环：第 {img_round + 1} 轮完成",
-                  f"CLIP raw={round_score:.3f}")
+    if config.image_loop_llm_driven:
+        # LLM-driven：每轮把 state + tool schema 喂 LLM，由它决定调
+        # edit_image / refine_poem_and_regen / stop（real ToolRegistry dispatch）
+        from core.agent.controller import ImageLoopController, build_loop_registry
+        _controller_adapter = _refine_adapter or agent.prompt_adapter or agent.score_adapter
+        if _controller_adapter is None:
+            state.log("自主模式", "⚠ LLM-driven 循环跳过",
+                      "未配置 LLM 评分/规划 adapter，无法运行 controller，回退到原写死流程")
+            config.image_loop_llm_driven = False  # 本次运行降级
+        else:
+            loop_registry = build_loop_registry(agent)
+            controller = ImageLoopController(
+                adapter=_controller_adapter, registry=loop_registry,
+            )
+            state.log("自主模式", "LLM-driven 改图循环启动",
+                      f"工具={sorted(controller.allowed_tools)} | "
+                      f"目标 raw={target:.3f} | 预算={config.max_image_improve_rounds}")
+            history: list = []
+            for img_round in range(config.max_image_improve_rounds):
+                if best_score >= target:
+                    state.log("自主模式", "LLM 循环·提前达标",
+                              f"CLIP raw={best_score:.3f} ≥ {target}")
+                    break
+                if best_state is not state:
+                    state.image = best_state.image
+                    state.clip_score_final = best_state.clip_score_final
 
-        if state.image is None:
-            state.log("自主模式", "改图：图像生成失败，终止", "")
-            break
+                decision = controller.decide(
+                    state=state, best_score=best_score, target=target,
+                    round_used=img_round, max_rounds=config.max_image_improve_rounds,
+                    stale_count=stale_count, prev_score=prev_round_score,
+                    history=history,
+                )
+                tool_name = decision.get("tool")
+                state.log(
+                    "自主模式",
+                    f"LLM 决策 ({img_round + 1}/{config.max_image_improve_rounds})",
+                    f"tool={tool_name} reasoning={(decision.get('reasoning') or '')[:80]}",
+                )
+                if decision.get("_fallback"):
+                    state.log("自主模式", "⚠ controller fallback",
+                              decision.get("reasoning", ""))
 
-        if round_score > best_score:
-            best_score = round_score
-            best_state = agent._copy_state(state)
+                state, should_stop = controller.dispatch(decision, state)
+                history.append(
+                    f"{tool_name}: {decision.get('feedback') or decision.get('reason') or ''}"
+                )
+                if should_stop:
+                    state.log("自主模式", "LLM 决定终止改图",
+                              decision.get("reason", ""))
+                    yield state
+                    break
+                if state.image is None:
+                    state.log("自主模式", "改图：图像生成失败，终止", "")
+                    break
 
-        # 自适应停止：仅在有"上一轮"可比较时累计 stale
-        # delta = 本轮相对上一轮的提升幅度 ≤ 阈值 → stale++
-        if prev_round_score is not None:
-            if round_score - prev_round_score <= config.adaptive_stop_delta:
-                stale_count += 1
-            else:
-                stale_count = 0
-        prev_round_score = round_score
+                round_score = agent._raw_clip(state)
+                state.log("自主模式",
+                          f"LLM 改图：第 {img_round + 1} 轮完成",
+                          f"CLIP raw={round_score:.3f}")
+                if round_score > best_score:
+                    best_score = round_score
+                    best_state = agent._copy_state(state)
+                if prev_round_score is not None:
+                    if round_score - prev_round_score <= config.adaptive_stop_delta:
+                        stale_count += 1
+                    else:
+                        stale_count = 0
+                prev_round_score = round_score
+                yield state
 
-        # 每轮改图结果都 yield 给前端（不管分数是否提升，用户都要看到图）
-        yield state
+                # 启发式护栏：即使 LLM 不喊 stop，也尊重 stale 阈值
+                if config.adaptive_stop and stale_count >= 2:
+                    state.log("自主模式", "自适应停止（覆盖 LLM 决策）",
+                              f"连续 {stale_count} 轮 CLIP 无显著提升，强制退出")
+                    break
 
-        # 自适应停止：连续 2 轮无显著提升
-        if config.adaptive_stop and stale_count >= 2:
-            state.log("自主模式", "自适应停止",
-                      f"连续 {stale_count} 轮 CLIP 无显著提升（delta ≤ {config.adaptive_stop_delta}），提前退出改图循环")
-            break
+    if not config.image_loop_llm_driven:
+        # 原写死流程（向后兼容默认行为）
+        for img_round in range(config.max_image_improve_rounds):
+            if best_score >= target:
+                state.log("自主模式", "改图循环·提前达标",
+                          f"CLIP raw={best_score:.3f} ≥ {target}，跳过剩余改图轮次")
+                break
+
+            # 编辑强度衰减：越往后越微调（0.75 → 0.50），防止灾难性遗忘前期特征
+            decay_strength = max(0.50, 0.75 - img_round * 0.12)
+            # 每轮从最优图出发改，而不是从上一轮可能改砸的图出发
+            if best_state is not state:
+                state.image = best_state.image
+                state.clip_score_final = best_state.clip_score_final
+            state.log("自主模式", f"改图循环：第 {img_round + 1} 轮",
+                      f"当前 raw={best_score:.3f}，调用 autonomous_improve_image…（强度={decay_strength:.2f}）")
+            state = agent.autonomous_improve_image(
+                state,
+                image_mode=config.image_improve_mode,
+                edit_model=getattr(config, "edit_model", "wanx2.1-imageedit"),
+                edit_strength=decay_strength,
+            )
+            round_score = agent._raw_clip(state)
+            state.log("自主模式", f"改图循环：第 {img_round + 1} 轮完成",
+                      f"CLIP raw={round_score:.3f}")
+
+            if state.image is None:
+                state.log("自主模式", "改图：图像生成失败，终止", "")
+                break
+
+            if round_score > best_score:
+                best_score = round_score
+                best_state = agent._copy_state(state)
+
+            # 自适应停止：仅在有"上一轮"可比较时累计 stale
+            # delta = 本轮相对上一轮的提升幅度 ≤ 阈值 → stale++
+            if prev_round_score is not None:
+                if round_score - prev_round_score <= config.adaptive_stop_delta:
+                    stale_count += 1
+                else:
+                    stale_count = 0
+            prev_round_score = round_score
+
+            # 每轮改图结果都 yield 给前端（不管分数是否提升，用户都要看到图）
+            yield state
+
+            # 自适应停止：连续 2 轮无显著提升
+            if config.adaptive_stop and stale_count >= 2:
+                state.log("自主模式", "自适应停止",
+                          f"连续 {stale_count} 轮 CLIP 无显著提升（delta ≤ {config.adaptive_stop_delta}），提前退出改图循环")
+                break
 
     # ═════════════════════════════════════════════════════════════════════
     # 收尾

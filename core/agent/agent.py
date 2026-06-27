@@ -1020,6 +1020,26 @@ class PoetryAgent:
         state.log("提示词更新", "用户手动编辑", new_prompt[:80])
         return self._phase_image_clip(state)
 
+    def refine_poem_and_regen_image(
+        self, state: AgentState, feedback: str,
+        refine_adapter=None,
+    ) -> AgentState:
+        """LLM-driven controller 复合动作：改诗 → 重提关键词 → 重写 prompt → 重生图。
+
+        消耗 1 次改诗 + 1 次改图预算，仅在诗-prompt 错位、反复改图无果时调度。
+        """
+        state.log("自主优化", "复合动作：改诗+重生图", (feedback or "")[:60])
+        adapter = refine_adapter or self.score_adapter or self.prompt_adapter
+        state = self.refine_poem(state, feedback, refine_adapter=adapter)
+        if state.phase == Phase.ERROR:
+            return state
+        state = self._phase_keyword_extract(state)
+        state = self._phase_prompt(state)
+        state = self._phase_prompt_review(state)
+        if state.phase == Phase.ERROR:
+            return state
+        return self._phase_image_clip(state)
+
     def edit_image_by_feedback(
         self, state: AgentState, feedback: str,
         planner_adapter=None, image_backend: str = None,
