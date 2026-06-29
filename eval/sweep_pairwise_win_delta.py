@@ -29,14 +29,48 @@ from __future__ import annotations
 import argparse
 import gc
 import json
+import re
 import time
 import traceback
-from typing import Any, Dict, List
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 import config
 from eval.dataset import get_benchmark, BenchInput
 from eval.metrics import summarize
 from eval.report import save_artifacts, table, fmt_num, OUTPUT_DIR
+
+
+_INVALID_FNAME_CHARS = re.compile(r'[\\/:*?"<>|\s]+')
+
+
+def _sanitize_for_filename(s: str, max_len: int = 24) -> str:
+    """Windows 文件名安全化：去掉非法字符 + 空白，截短。"""
+    s = _INVALID_FNAME_CHARS.sub("_", (s or "").strip())
+    s = s.strip("._") or "untitled"
+    return s[:max_len]
+
+
+def _save_sweep_image(image, save_dir: Path, theme_idx: int,
+                      first_line: str, gen_idx: int, clip_raw: float) -> None:
+    """保存一张生成图到 sweep 图片目录。
+
+    文件名规则（按用户要求）：诗第一句 + 第几次生成 + CLIP 评分
+    实际格式：{theme_idx:02d}_{第一句}_gen{gen_idx}_clip{clip:.3f}.png
+    theme_idx 前缀只是为了文件管理器里按主题聚合排序，不影响信息。
+    """
+    if image is None:
+        return
+    fname = (
+        f"{theme_idx:02d}_"
+        f"{_sanitize_for_filename(first_line)}_"
+        f"gen{gen_idx}_clip{clip_raw:.3f}.png"
+    )
+    try:
+        save_dir.mkdir(parents=True, exist_ok=True)
+        image.save(save_dir / fname, format="PNG")
+    except Exception as e:
+        print(f"      ⚠ 图像保存失败 {fname}: {e}")
 
 
 def _cuda_cleanup() -> None:
@@ -89,8 +123,13 @@ def _count_evo_rounds(state) -> int:
     return sum(1 for s in state.trace if "擂台" in s.phase and "第" in s.action and "轮" in s.action)
 
 
-def _run_one_delta(delta: float, inputs: List[BenchInput], args) -> Dict[str, Any]:
-    """在固定 delta 下跑 inputs 个 autonomous fixed loop，返回聚合统计。"""
+def _run_one_delta(delta: float, inputs: List[BenchInput], args,
+                   images_dir: Optional[Path] = None) -> Dict[str, Any]:
+    """在固定 delta 下跑 inputs 个 autonomous fixed loop，返回聚合统计。
+
+    如果 images_dir 不为 None，每条 autonomous 跑出来的所有图（初次 + 每轮
+    改图）都按"诗第一句_gen{N}_clip{score}.png"命名落到该目录。
+    """
     # 关键：monkey-patch config.PAIRWISE_WIN_DELTA，让生产代码读到当前 sweep 值
     original = config.PAIRWISE_WIN_DELTA
     config.PAIRWISE_WIN_DELTA = delta
@@ -117,10 +156,27 @@ def _run_one_delta(delta: float, inputs: List[BenchInput], args) -> Dict[str, An
                 image_loop_llm_driven=False,   # sweep 只测 fixed loop
             )
             final = None
+            gen_idx = 0          # 该 autonomous 内已存图序号
+            prev_image_id = None  # 跟踪 state.image 对象 id，变化才视作"新图"
             try:
                 try:
                     for s in autonomous_full_run(agent, state, config=ac):
                         final = s
+                        # 检测到新图：id 变化 = 这次 yield 来自一次新的生图
+                        if images_dir is not None and s.image is not None:
+                            cur_id = id(s.image)
+                            if cur_id != prev_image_id:
+                                gen_idx += 1
+                                first_line = ""
+                                if s.poem:
+                                    first_line = s.poem.split("\n")[0].strip()
+                                # 用 delta 子目录组织，3 个 sweep run 不会冲突
+                                delta_dir = images_dir / f"delta_{delta:.2f}"
+                                _save_sweep_image(
+                                    s.image, delta_dir, i + 1,
+                                    first_line, gen_idx, _raw_clip(s),
+                                )
+                                prev_image_id = cur_id
                 except Exception as e:
                     # 关键：完整 traceback 入库，OOM 这类问题靠 str(e) 看不清
                     err_msg = str(e)[:200]
@@ -239,6 +295,9 @@ def main():
                    help="擂台进化轮次（要 >0 才有攻擂数据）")
     p.add_argument("--dry-run", action="store_true",
                    help="不调真 API；monkey-patch 验证 + 出空报告")
+    p.add_argument("--no-save-images", action="store_true",
+                   help="不保存生成的图（默认会按 主题_第几次_clip 命名落到 "
+                        "outputs/eval/sweep_pairwise_win_delta_images_<ts>/）")
     args = p.parse_args()
 
     if args.dry_run:
@@ -264,11 +323,19 @@ def main():
           f"image={args.image_backend}")
     print(f"[sweep] sweep 期间 PAIRWISE_WIN_DELTA 会被 monkey-patch，结束后恢复")
 
+    # 图像落盘目录（每次 sweep run 一个独立时间戳目录，分 delta 子目录组织）
+    images_dir: Optional[Path] = None
+    if not args.no_save_images:
+        ts_dir = time.strftime("%Y%m%d_%H%M%S")
+        images_dir = OUTPUT_DIR / f"sweep_pairwise_win_delta_images_{ts_dir}"
+        images_dir.mkdir(parents=True, exist_ok=True)
+        print(f"[sweep] 图像落盘到: {images_dir}")
+
     t_all = time.time()
     results = []
     for delta in args.deltas:
         print(f"\n=== sweep delta = {delta:.2f} ===")
-        r = _run_one_delta(delta, inputs, args)
+        r = _run_one_delta(delta, inputs, args, images_dir=images_dir)
         results.append(r)
         # 每个 delta 跑完落一份 recovery snapshot，崩了至少能拿到已完成 delta
         _dump_recovery(args, results)
