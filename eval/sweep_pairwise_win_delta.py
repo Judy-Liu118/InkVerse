@@ -27,14 +27,56 @@ loop 路径走擂台进化），出对比表看哪个值最稳定。
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import time
+import traceback
 from typing import Any, Dict, List
 
 import config
 from eval.dataset import get_benchmark, BenchInput
 from eval.metrics import summarize
-from eval.report import save_artifacts, table, fmt_num
+from eval.report import save_artifacts, table, fmt_num, OUTPUT_DIR
+
+
+def _cuda_cleanup() -> None:
+    """每条 autonomous 之间强制 GC + CUDA 显存碎片整理。
+
+    8GB GPU 上 LoRA + Z-Image diffusers + CLIP 反复加载/卸载会让显存碎片化，
+    跑长 sweep 必撞 OOM（2026-06-29 在 delta=0.10 第 9 条触发，后续 22 条
+    全级联失败）。每条之间 best-effort 清一次：不能解所有问题（unsloth 4bit
+    权重的内部缓存 empty_cache 也释放不掉），但能拖延 OOM、避免 1 次 OOM
+    污染整个 sweep。
+    """
+    gc.collect()
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
+    except Exception:
+        pass
+
+
+def _dump_recovery(args, results: List[Dict[str, Any]]) -> None:
+    """每个 delta 跑完后写一份 recovery JSON 到固定路径。
+
+    sweep 单次跑 6hr+ 时任何崩溃都会全丢数据；这个文件让你至少能拿到已完成
+    delta 的结果。固定路径覆盖写，每次跑一遍 sweep 都会被新数据覆盖。
+    """
+    path = OUTPUT_DIR / "sweep_pairwise_win_delta_RECOVERY.json"
+    try:
+        path.write_text(
+            json.dumps(
+                {"config": vars(args), "results": results,
+                 "note": "partial recovery snapshot, overwritten after each delta"},
+                ensure_ascii=False, indent=2, default=str,
+            ),
+            encoding="utf-8",
+        )
+        print(f"      [recovery] 已写 {path}")
+    except Exception as e:
+        print(f"      ⚠ recovery dump 失败：{e}")
 
 
 def _count_attack_succeeded(state) -> int:
@@ -76,27 +118,42 @@ def _run_one_delta(delta: float, inputs: List[BenchInput], args) -> Dict[str, An
             )
             final = None
             try:
-                for s in autonomous_full_run(agent, state, config=ac):
-                    final = s
-            except Exception as e:
-                print(f"      ⚠ 异常：{e}")
-                rows.append({"theme": item.user_input, "error": str(e)})
-                continue
-            if final is None:
-                rows.append({"theme": item.user_input, "error": "no final"})
-                continue
-            attacks = _count_attack_succeeded(final)
-            evo_rounds = _count_evo_rounds(final)
-            rows.append({
-                "theme":          item.user_input,
-                "clip_raw":       _raw_clip(final),
-                "attack_succeed": attacks,
-                "evo_rounds":     evo_rounds,
-                "attack_rate":    (attacks / evo_rounds) if evo_rounds else 0.0,
-                "elapsed_sec":    round(time.time() - t0, 2),
-            })
-            print(f"      CLIP={fmt_num(rows[-1]['clip_raw'])}, "
-                  f"攻擂 {attacks}/{evo_rounds}")
+                try:
+                    for s in autonomous_full_run(agent, state, config=ac):
+                        final = s
+                except Exception as e:
+                    # 关键：完整 traceback 入库，OOM 这类问题靠 str(e) 看不清
+                    err_msg = str(e)[:200]
+                    err_type = type(e).__name__
+                    print(f"      ⚠ 异常 [{err_type}]：{err_msg}")
+                    traceback.print_exc()
+                    rows.append({
+                        "theme":     item.user_input,
+                        "error":     f"{err_type}: {err_msg}",
+                        "traceback": traceback.format_exc()[:2000],
+                    })
+                    continue
+                if final is None:
+                    rows.append({"theme": item.user_input, "error": "no final"})
+                    continue
+                attacks = _count_attack_succeeded(final)
+                evo_rounds = _count_evo_rounds(final)
+                rows.append({
+                    "theme":          item.user_input,
+                    "clip_raw":       _raw_clip(final),
+                    "attack_succeed": attacks,
+                    "evo_rounds":     evo_rounds,
+                    "attack_rate":    (attacks / evo_rounds) if evo_rounds else 0.0,
+                    "elapsed_sec":    round(time.time() - t0, 2),
+                })
+                print(f"      CLIP={fmt_num(rows[-1]['clip_raw'])}, "
+                      f"攻擂 {attacks}/{evo_rounds}")
+            finally:
+                # 每条之间无条件 cleanup（成功或失败都清），避免单次 OOM 级联污染
+                # 后续所有 condition。释放 state 引用 + GC + empty_cache。
+                final = None
+                state = None
+                _cuda_cleanup()
     finally:
         config.PAIRWISE_WIN_DELTA = original
 
@@ -213,6 +270,8 @@ def main():
         print(f"\n=== sweep delta = {delta:.2f} ===")
         r = _run_one_delta(delta, inputs, args)
         results.append(r)
+        # 每个 delta 跑完落一份 recovery snapshot，崩了至少能拿到已完成 delta
+        _dump_recovery(args, results)
 
     elapsed_all = time.time() - t_all
     print(f"\n[sweep] 总耗时 {elapsed_all/60:.1f} min")
