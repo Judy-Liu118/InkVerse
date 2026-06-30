@@ -158,10 +158,29 @@ def _run_one_delta(delta: float, inputs: List[BenchInput], args,
             final = None
             gen_idx = 0          # 该 autonomous 内已存图序号
             prev_image_id = None  # 跟踪 state.image 对象 id，变化才视作"新图"
+            # 擂台演化追踪：state.poem 字符串变化即一个新诗版本（覆盖
+            # arena 海选 / 擂台攻擂 / refine 重写）。每条 condition 独立。
+            poem_versions: List[Dict[str, Any]] = []
+            prev_poem: Optional[str] = None
             try:
                 try:
                     for s in autonomous_full_run(agent, state, config=ac):
                         final = s
+                        # 检测到新诗：state.poem 字符串变化 = 一个新版本
+                        if s.poem and s.poem != prev_poem:
+                            phase_str = ""
+                            action_str = ""
+                            if s.trace:
+                                phase_str = getattr(s.trace[-1], "phase", "") or ""
+                                action_str = getattr(s.trace[-1], "action", "") or ""
+                            poem_versions.append({
+                                "version": len(poem_versions),
+                                "poem":    s.poem,
+                                "title":   s.title or "",
+                                "phase":   phase_str,
+                                "action":  action_str,
+                            })
+                            prev_poem = s.poem
                         # 检测到新图：id 变化 = 这次 yield 来自一次新的生图
                         if images_dir is not None and s.image is not None:
                             cur_id = id(s.image)
@@ -201,6 +220,11 @@ def _run_one_delta(delta: float, inputs: List[BenchInput], args,
                     "evo_rounds":     evo_rounds,
                     "attack_rate":    (attacks / evo_rounds) if evo_rounds else 0.0,
                     "elapsed_sec":    round(time.time() - t0, 2),
+                    # 全量产物：复现一个 condition 完整状态所需
+                    "poem":            final.poem,
+                    "title":           final.title,
+                    "image_prompt":    final.prompt,
+                    "poem_evolution":  poem_versions,
                 })
                 print(f"      CLIP={fmt_num(rows[-1]['clip_raw'])}, "
                       f"攻擂 {attacks}/{evo_rounds}")
@@ -264,15 +288,47 @@ def _render_report(args, results: List[Dict[str, Any]]) -> str:
         "推荐：在 CLIP std 最低的同时攻擂率落在 15-40% 区间的 delta。"
     )
     md.append("")
-    md.append("## 2. 各 delta 详情")
+    md.append("## 2. 各 delta 详情（终态产物）")
     for r in results:
         md.append(f"### delta = {r['delta']:.2f}")
         for row in r["rows"]:
             if "error" in row:
                 md.append(f"- ⚠ {row['theme']}: {row['error']}")
                 continue
-            md.append(f"- {row['theme']}: CLIP={fmt_num(row['clip_raw'])}, "
+            md.append(f"- **{row['theme']}**: CLIP={fmt_num(row['clip_raw'])}, "
                       f"攻擂 {row['attack_succeed']}/{row['evo_rounds']}")
+            title = row.get("title", "") or "(无)"
+            md.append(f"  - 诗名：{title}")
+            poem = row.get("poem", "") or ""
+            if poem:
+                md.append("  - 终诗：")
+                for line in poem.split("\n"):
+                    md.append(f"    > {line}")
+            img_prompt = row.get("image_prompt", "") or ""
+            if img_prompt:
+                # 图像提示词通常 200-400 字符，全量展示便于回溯
+                md.append(f"  - 图像提示词：{img_prompt}")
+        md.append("")
+    # §3 擂台演化追踪：每条 condition 列出 poem 演化路径
+    md.append("## 3. 擂台演化追踪")
+    md.append("_每个版本一条记录：v0=arena 海选冠军，v1+ = 擂台攻擂成功 / refine_")
+    for r in results:
+        md.append(f"### delta = {r['delta']:.2f}")
+        for row in r["rows"]:
+            if "error" in row:
+                continue
+            versions = row.get("poem_evolution", []) or []
+            md.append(f"#### {row['theme']}")
+            if len(versions) <= 1:
+                md.append(f"_(仅 1 个版本，无演化)_")
+                md.append("")
+                continue
+            for v in versions:
+                tag = v.get("action", "") or v.get("phase", "")
+                md.append(f"- **v{v['version']}** [{tag}]")
+                for line in (v.get("poem") or "").split("\n"):
+                    md.append(f"    > {line}")
+            md.append("")
         md.append("")
     return "\n".join(md)
 
