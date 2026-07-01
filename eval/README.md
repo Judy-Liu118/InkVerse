@@ -20,6 +20,7 @@
 - `build_classics_benchmark.py` —— 构造 15 首唐诗名作 benchmark 供 eval_clip 复用
 - `build_f3_controlled.py` —— **构造 F3 controlled pair 池**（base 严重出律 + 意境 ≥ lora），把 anecdote (n=4) 推向 n=64+ 强结论；脚本支持 `--dry-run` 验证拓扑，真跑约 1-2hr API
 - `sweep_pairwise_win_delta.py` —— **PAIRWISE_WIN_DELTA 擂台阈值 sweep**（在 [0.10, 0.15, 0.17, 0.20] 上各跑 autonomous fixed loop，看哪个值 CLIP std 最低 + 攻擂率落在 15-40% 健康区间）；monkey-patch config + 自动恢复，`--dry-run` 验证拓扑
+- `vlm_hard_constraint.py` —— **VLM 硬约束命中率评测**（读 sweep 聚合 JSON，30 张图 × qwen-vl-max 逐 keyword 判 present）；独立打补丁 CLIP "图里东西多"盲点，不烧文生图配额，约 780 秒跑完 30 张
 - `dataset.py` —— 主 benchmark 题源 + `--dump` 导出 `benchmark_themes.json`
 
 ## 主跑命令（n=32 × 3 run · 12h overnight）
@@ -77,6 +78,8 @@ python -m eval.analyze_clip_dual outputs/eval/eval_clip_<timestamp>.json
 | [`REPORT_main_n32x3run_20260624.md`](REPORT_main_n32x3run_20260624.md) | 4 模型 × 4 评委 × n=32 × 3 run 主跑 | 2026-06-24 |
 | [`REPORT_F3_pingze_sensitivity_20260624.md`](REPORT_F3_pingze_sensitivity_20260624.md) | F3 retrospective 验证：评委对格律敏感度（n=4-5 controlled pair，初步推测）| 2026-06-24 |
 | [`REPORT_autonomous_n5_20260627.md`](REPORT_autonomous_n5_20260627.md) | LLM-driven 改图循环点亮 + eval 三臂对比（single_pass / autonomous(fixed) / autonomous(llm)）+ 诚实性指标 + VLM 独立裁判（n=5，负面 + caveat 充足）| 2026-06-27 |
+| [`REPORT_pairwise_win_delta_sweep_2026-06-30.md`](REPORT_pairwise_win_delta_sweep_2026-06-30.md) | 擂台 `PAIRWISE_WIN_DELTA` 阈值 sweep（3 delta × n=10）+ 主题×delta 全景对比 + 攻擂率异常 surface | 2026-06-30 |
+| [`REPORT_vlm_hard_constraint_20260701.md`](REPORT_vlm_hard_constraint_20260701.md) | VLM 硬约束命中率（30 张图逐 keyword yes/no）—— 独立打补丁 CLIP "图里东西多"盲点；rich 题 δ=0.17 命中率 80% 佐证 sweep 结论 | 2026-07-01 |
 
 完整方法论（公式 / 系数 / 评委 prompt 全文 / 阈值清单）冻结在 [`METHODOLOGY.md`](METHODOLOGY.md) —— 后续代码漂移仍能解释这份报告。
 
