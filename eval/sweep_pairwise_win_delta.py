@@ -338,7 +338,10 @@ def main():
         description="PAIRWISE_WIN_DELTA sweep（擂台进化阈值调参）",
     )
     p.add_argument("--n", type=int, default=10,
-                   help="每个 delta 跑多少主题")
+                   help="每个 delta 跑多少主题（从 get_benchmark stratified 切片）")
+    p.add_argument("--offset", type=int, default=0,
+                   help="跳过 benchmark 前 N 主题（用于分批补数据；如已跑主题 1-10、"
+                        "只想补 11-32 传 --n 32 --offset 10）")
     p.add_argument("--deltas", type=float, nargs="*",
                    default=[0.10, 0.15, 0.17, 0.20])
     p.add_argument("--poem-model",   default="local_lora")
@@ -375,6 +378,12 @@ def main():
         return
 
     inputs = get_benchmark(n=args.n)
+    if args.offset > 0:
+        if args.offset >= len(inputs):
+            raise SystemExit(f"--offset {args.offset} >= n={args.n}，无主题可跑")
+        inputs = inputs[args.offset:]
+        print(f"[sweep] --offset={args.offset}：跳过前 {args.offset} 主题，"
+              f"本次实际跑 {len(inputs)} 主题（原始编号 {args.offset+1}..{args.n}）")
     print(f"[sweep] 在 deltas={args.deltas} 上各跑 n={len(inputs)} · "
           f"image={args.image_backend}")
     print(f"[sweep] sweep 期间 PAIRWISE_WIN_DELTA 会被 monkey-patch，结束后恢复")

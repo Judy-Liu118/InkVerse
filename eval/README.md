@@ -75,11 +75,14 @@ python -m eval.analyze_clip_dual outputs/eval/eval_clip_<timestamp>.json
 
 | 文件 | 实验 | 报告日期 |
 |---|---|---|
+| [`REPORT_eval_clip_dual_anchor_20260623.md`](REPORT_eval_clip_dual_anchor_20260623.md) | **eval_clip 主报告**：双锚点 CLIP vs 单锚点对齐分（n=15 千古名诗 baseline）—— 生产 dual (α=0.6) 与 VLM Spearman ρ=+0.365，显著优于 prompt_only (+0.301)、α grid search 最优 α=0.8 处 ρ=+0.414；dual 设计被数据支持、生产权重仍有 +0.049 优化空间 | 2026-06-23 |
 | [`REPORT_main_n32x3run_20260624.md`](REPORT_main_n32x3run_20260624.md) | 4 模型 × 4 评委 × n=32 × 3 run 主跑 | 2026-06-24 |
 | [`REPORT_F3_pingze_sensitivity_20260624.md`](REPORT_F3_pingze_sensitivity_20260624.md) | F3 retrospective 验证：评委对格律敏感度（n=4-5 controlled pair，初步推测）| 2026-06-24 |
 | [`REPORT_autonomous_n5_20260627.md`](REPORT_autonomous_n5_20260627.md) | LLM-driven 改图循环点亮 + eval 三臂对比（single_pass / autonomous(fixed) / autonomous(llm)）+ 诚实性指标 + VLM 独立裁判（n=5，负面 + caveat 充足）| 2026-06-27 |
 | [`REPORT_pairwise_win_delta_sweep_2026-06-30.md`](REPORT_pairwise_win_delta_sweep_2026-06-30.md) | 擂台 `PAIRWISE_WIN_DELTA` 阈值 sweep（3 delta × n=10）+ 主题×delta 全景对比 + 攻擂率异常 surface | 2026-06-30 |
 | [`REPORT_vlm_hard_constraint_20260701.md`](REPORT_vlm_hard_constraint_20260701.md) | VLM 硬约束命中率（30 张图逐 keyword yes/no）—— 独立打补丁 CLIP "图里东西多"盲点；rich 题 δ=0.17 命中率 80% 佐证 sweep 结论 | 2026-07-01 |
+| [`REPORT_arena_ablation_20260701.md`](REPORT_arena_ablation_20260701.md) | **擂台机制净收益消融**：arm A (`max_poem_rounds=0`, 无擂台) vs arm B (`max_poem_rounds=2`, 有擂台)，主池 n=22（04-22 backend）+ 辅池 n=10（03-03 backend）—— CLIP mean 平手（Δ -0.002）但 VLM 硬约束 arm B 主池 +18.2pp（60.6% → 78.8%），结论保留擂台 | 2026-07-01 |
+| [`REPORT_eval_refine_LoRA_n32_20260702.md`](REPORT_eval_refine_LoRA_n32_20260702.md) | **eval_refine 主报告**：LoRA baseline + qwen-plus 单轮 refine（n=32 主 benchmark，生产链路真实场景）—— 改动率 53.1%、cohesion +0.031 全样本 / +0.074 改动样本主导、rhyme 因 feedback 硬约束零效果、pingze -0.004 副作用；refine 真实价值维度是"意境连贯度重塑"而非 LoRA 弱项押韵优化 | 2026-07-02 |
 
 完整方法论（公式 / 系数 / 评委 prompt 全文 / 阈值清单）冻结在 [`METHODOLOGY.md`](METHODOLOGY.md) —— 后续代码漂移仍能解释这份报告。
 
