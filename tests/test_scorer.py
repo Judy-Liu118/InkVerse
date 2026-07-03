@@ -42,6 +42,79 @@ def test_rhyme_non_rhyming_low(scorer):
     assert score < 0.7
 
 
+# ── 韵脚兜底稳定性（_get_stable_rhyme） ────────────────────────────────────
+def test_get_stable_rhyme_returns_string(scorer):
+    """任意汉字调用都应返回非空 str，不抛异常。"""
+    for c in ["冬", "东", "花", "明", "声", "风", "月"]:
+        r = scorer._get_stable_rhyme(c)
+        assert isinstance(r, str) and r, f"{c} 返回异常: {r!r}"
+
+
+def test_get_stable_rhyme_same_pinyin_final_consistent(scorer):
+    """走 pypinyin 兜底路径（简体字 pingshui 库未覆盖时）的字，若 final 相同应返同韵组。
+    这是 _score_rhyme 里 set() 去重能否正确判定押韵的关键前提。
+    """
+    # 风/声/灯/腾 都是简体，pypinyin final = 'eng' → 兜底映射到 '庚'
+    groups = {scorer._get_stable_rhyme(c) for c in ["风", "声", "灯", "腾"]}
+    assert len(groups) == 1, f"同 final 字应返同韵组，实际得到 {groups}"
+
+
+def test_pinyin_pingshui_endswith_semantics(scorer):
+    """pypinyin 兜底路径按 endswith 匹（尾韵决定押韵）。
+    startswith 会把 'iang' 误匹到 'i'→支；endswith 才能正确匹到 'ang'→阳。
+    """
+    from core.poem.theme import PINYIN_TO_PINGSHUI
+    # 数据前提：iang 和 ang 都映射到阳（同韵组），i 单独映射到支
+    assert PINYIN_TO_PINGSHUI["iang"] == "阳"
+    assert PINYIN_TO_PINGSHUI["ang"]  == "阳"
+    assert PINYIN_TO_PINGSHUI["i"]    == "支"
+    # 「阳」实际 final='ang'，在字典里直接命中，返 '阳'（无需进循环）
+    assert scorer._get_stable_rhyme("阳") == "阳"
+
+
+def test_get_stable_rhyme_uei_iou_endswith_fix(scorer):
+    """回归：pypinyin 对高频字返回 final='iou'/'uei'（非 'iu'/'ui'），
+    这些不在 PINYIN_TO_PINGSHUI 里、需走 loop 兜底。
+    · 老 bug：startswith 会把 'uei' 误匹到 'u'→虞
+    · 修复后：endswith 正确匹到 'ei'→微
+    以「为」为代表（pingshui 库无记录，纯走 pypinyin 路径）。
+    """
+    import pypinyin
+    from pingshui_rhyme import RhymeChecker
+    # 前提验证：为 pingshui 未收，pypinyin 返 uei（若上游变更此断言先失败）
+    assert RhymeChecker().get_rhyme_group("为") is None
+    assert pypinyin.pinyin("为", style=pypinyin.Style.FINALS)[0][0] == "uei"
+    # endswith 修复后应归微；老 startswith bug 会返虞
+    assert scorer._get_stable_rhyme("为") == "微", (
+        "endswith 修复失效：为 应归微（ei 尾韵），startswith 老 bug 会返虞"
+    )
+
+
+# ── 体裁识别（含简称与"绝句/律诗"默认五言） ────────────────────────────
+@pytest.mark.parametrize("user_topic, expected", [
+    # 全称照常命中
+    ("写一首五言绝句，主题是春", ("五言绝句", 4, 5)),
+    ("写一首七言律诗，主题是秋", ("七言律诗", 8, 7)),
+    # 简称
+    ("写一首五绝，主题是月",     ("五言绝句", 4, 5)),
+    ("写一首七绝，主题是花",     ("七言绝句", 4, 7)),
+    ("写一首五律，主题是山",     ("五言律诗", 8, 5)),
+    ("写一首七律，主题是江",     ("七言律诗", 8, 7)),
+    # 只说体裁 → 默认五言
+    ("写一首绝句吧",             ("五言绝句", 4, 5)),
+    ("写一首律诗吧",             ("五言律诗", 8, 5)),
+    # 全称优先于简称（"七言绝句" 命中前不会被 "绝句" 截胡）
+    ("请给我一首七言绝句",       ("七言绝句", 4, 7)),
+])
+def test_detect_genre_aliases(scorer, user_topic, expected):
+    assert scorer.detect_genre(user_topic) == expected
+
+
+def test_detect_genre_default_when_none(scorer):
+    """完全不提体裁时兜底为五言绝句。"""
+    assert scorer.detect_genre("给我写个诗") == ("五言绝句", 4, 5)
+
+
 # ── 同义合掌库 ─────────────────────────────────────────────────────────────
 def test_synonym_clash_groups_non_empty():
     """合掌库不能为空 —— 是改诗质量护栏的核心数据。"""

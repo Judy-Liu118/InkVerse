@@ -120,11 +120,25 @@ class PoemScorer:
         "平起首句入韵": ["平平仄仄仄平平", "仄仄平平仄仄平", "仄仄平平平仄仄", "平平仄仄仄平平"],
     }
 
+    # 体裁简称与「只说绝句/律诗」的默认体裁映射
+    # · 简称（五绝/七绝/五律/七律）→ 对应全称
+    # · 只说体裁（绝句/律诗）→ 默认五言（更朴素、生成成本低）
+    # 匹配顺序：先扫全称（GENRE_CONFIG），再扫别名 —— 避免「七言绝句」被「绝句」截胡
+    GENRE_ALIASES = {
+        "五绝": "五言绝句", "七绝": "七言绝句",
+        "五律": "五言律诗", "七律": "七言律诗",
+        "绝句": "五言绝句", "律诗": "五言律诗",
+    }
+
     @staticmethod
     def detect_genre(user_topic: str) -> Tuple[str, int, int]:
         for name, (nl, cpl) in GENRE_CONFIG.items():
             if name in user_topic:
                 return name, nl, cpl
+        for alias, full_name in PoemScorer.GENRE_ALIASES.items():
+            if alias in user_topic:
+                nl, cpl = GENRE_CONFIG[full_name]
+                return full_name, nl, cpl
         return "五言绝句", 4, 5
 
     # ── 完整评分 ───────────────────────────────────────────────────────────
@@ -395,18 +409,9 @@ class PoemScorer:
 
         return round(max(0.1, coeff), 4)
 
-    # ── 意图评分（兼容旧接口：返回 intent 单值；新接口 score_4dim_via_llm 返 4 维）─────
-    def _score_intent_combined(self, poem, user_request, adapter) -> Dict:
-        """旧接口：只回 intent 一维（向后兼容）。"""
-        if self._is_api_backend(adapter):
-            dims = self._score_llm_api_4dim(poem, user_request, adapter)
-            llm_score = dims["intent"]
-        else:
-            llm_score = self._score_intent_llm_local(poem, user_request, adapter)
-        return {"combined": llm_score, "llm": llm_score}
-
+    # ── LLM 意图 4 维评分 ──────────────────────────────────────────────────
     def score_4dim_via_llm(self, poem, user_request, adapter) -> dict:
-        """新接口：让 LLM 评委按 rubric 给 4 维（intent/imagery/cohesion/aesthetics）。
+        """让 LLM 评委按 rubric 给 4 维（intent/imagery/cohesion/aesthetics）。
 
         本地 backend 不支持 4 维评分（提示词太复杂、本地模型不可靠），
         会回落到：intent 走 local CoT、其余 3 维返 None 让 evaluate_full 用规则版兜底。
@@ -605,12 +610,15 @@ C. 明显缺失的要素（若无请写"无"）："""
             if result and isinstance(result, list):
                 ping_entry = next((e for e in result if e[0] == 'ping'), result[0])
                 full = ping_entry[2]
+                # full 格式为「上/下平聲{序号汉字}{韵目字}」（如「上平聲二冬」）
+                # regex 抓 30 个平水韵目字（实测 100% 命中）
                 m = re.search(
                     r'[東冬江支微魚虞齊佳灰真文元寒刪先蕭肴豪歌麻陽庚青蒸尤侵覃鹽咸]',
                     full,
                 )
                 if m: return m.group()
-                if len(full) >= 2: return full[-2:]
+                # 兜底：格式异常时取末字（末字即韵目字，倒数第二字是序号噪声）
+                if full: return full[-1]
         except Exception:
             pass
         try:
@@ -619,8 +627,10 @@ C. 明显缺失的要素（若无请写"无"）："""
                 final = fi[0][0]
                 if final in PINYIN_TO_PINGSHUI:
                     return PINYIN_TO_PINGSHUI[final]
+                # 押韵靠尾部决定：用 endswith 而非 startswith
+                # （例如 'iang' 意外未被字典直接命中时，应匹 'ang'→阳 而非 'i'→支）
                 for k in PINYIN_TO_PINGSHUI:
-                    if final.startswith(k):
+                    if final.endswith(k):
                         return PINYIN_TO_PINGSHUI[k]
                 return final
         except Exception:
