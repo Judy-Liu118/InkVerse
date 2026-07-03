@@ -143,6 +143,14 @@ final_total = raw_total × penalty_c × clash_c × req_c
   - 落日（残阳/落日/夕阳/斜阳/暮日/夕照）
 - 必须意象：从 user_request 抽取"要有X和Y"模式，过 `get_imagery_synonyms` 查同义词表，每缺 1 个 → `coeff ×= 0.75`
 
+### 4.1 required_coeff 设计意图（与 LLM intent 分工）
+
+- **LLM 意图评分（权重 40%）是主判**：负责"意思到没到"的语义判断，抽象主题（思乡/壮志/无常）能覆盖，是主要打分来源。
+- **`required_coeff` 是硬约束保险**：只对具象要求（"要有柳树和燕子"这类）字面/同义词命中扣分，兜底 LLM 判"意到但字面漏"的情况。
+- **false negative（同义词表漏收）会误扣**，但对所有模型/所有 arm 一视同仁 → 是 **fair penalty**，不影响相对排名，只影响绝对分值。
+- **不做全池同义词表补齐**（如 `古刹/钟鼓/戍楼/角声` 等 rich 意象未收）：报告全用相对提升（pass@0.7 / winner Δ / arena Δ），绝对分值偏低不影响任何结论；补表反而引入版本管理成本 + 老报告分数无法跨版本比。
+- **`SCORE_PENALTY_FLOOR = 0.7`**（`config.py`）给多重扣分下限，防止一首诗被 penalty × clash × required 三重压死。
+
 ---
 
 ## 5. LLM 评委 4 维 rubric（best 候选用）

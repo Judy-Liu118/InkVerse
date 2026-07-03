@@ -2,11 +2,10 @@
 core.logger -- 统一日志系统
 
 替换全局 print()，支持控制台 + 文件双输出。
-每次启动创建带时间戳的日志文件，保留最近 10 个。
+每次启动创建带时间戳的日志文件。
 """
 import os
 import sys
-import glob
 import logging
 import time
 

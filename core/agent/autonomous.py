@@ -44,7 +44,9 @@ class AutonomousConfig:
     adaptive_stop:            bool  = True   # 是否启用自适应停止
     adaptive_stop_delta:      float = 0.01   # 连续无提升的 delta 阈值
     # LLM-driven 改图循环：把 state + tool schema 喂 LLM，由 LLM 决定调用
-    # edit_image / refine_poem_and_regen / stop（默认关，向后兼容写死流程）
+    # edit_image / refine_poem_and_regen / stop
+    # 默认走写死流程（低方差、成本可预测）；置 True 走 LLM 决策，参见
+    # eval/REPORT_autonomous_n5_20260627.md 的诚实性指标与 caveat
     image_loop_llm_driven:    bool  = False
 
 
@@ -242,7 +244,7 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
                     break
 
     if not config.image_loop_llm_driven:
-        # 原写死流程（向后兼容默认行为）
+        # 写死流程（默认路径）
         for img_round in range(config.max_image_improve_rounds):
             if best_score >= target:
                 state.log("自主模式", "改图循环·提前达标",

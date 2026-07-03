@@ -127,7 +127,7 @@ with gr.Blocks(
             with gr.Row():
                 refine_feedback = gr.Textbox(
                     show_label=False,
-                    placeholder="例：意境太浅，改得更深沉、更有禅意",
+                    placeholder="例：整体太热闹，我想要更清冷幽静的感觉",
                     lines=2, scale=3,
                 )
                 refine_poem_model = gr.Dropdown(

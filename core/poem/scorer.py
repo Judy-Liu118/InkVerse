@@ -340,6 +340,17 @@ class PoemScorer:
     # ── 必须意象检查 ───────────────────────────────────────────────────────
     def _check_required_keywords(self, poem: str, user_request: str,
                                   candidate_index: int = 0) -> float:
+        """硬约束保险：字面 + 同义词命中检查。
+
+        设计意图（跟 LLM intent 分工）：
+          · LLM 意图评分（权重 40%）负责"意思到没到"的语义主判，抽象主题（思乡/壮志）
+            也能覆盖，是主要打分来源；
+          · 本方法只对具象要求（"要有柳树和燕子"这类）做兜底扣分，命中失败 ×0.75；
+          · false negative（同义词表漏收 → 判为未命中）会误扣，但**对所有模型/所有
+            arm 都成立**，是 fair penalty，不影响相对排名；
+          · SCORE_PENALTY_FLOOR 给多重扣分下限，防止好诗被压死。
+        参见 eval/METHODOLOGY.md §「required_coeff 设计意图」。
+        """
         poem_text = "".join(poem.split("\n"))
         coeff = 1.0
         META_WORDS = {"意向", "意象", "意境", "主题", "内容", "元素",
