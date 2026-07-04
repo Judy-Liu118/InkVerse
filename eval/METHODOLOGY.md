@@ -148,8 +148,21 @@ final_total = raw_total × penalty_c × clash_c × req_c
 - **LLM 意图评分（权重 40%）是主判**：负责"意思到没到"的语义判断，抽象主题（思乡/壮志/无常）能覆盖，是主要打分来源。
 - **`required_coeff` 是硬约束保险**：只对具象要求（"要有柳树和燕子"这类）字面/同义词命中扣分，兜底 LLM 判"意到但字面漏"的情况。
 - **false negative（同义词表漏收）会误扣**，但对所有模型/所有 arm 一视同仁 → 是 **fair penalty**，不影响相对排名，只影响绝对分值。
-- **不做全池同义词表补齐**（如 `古刹/钟鼓/戍楼/角声` 等 rich 意象未收）：报告全用相对提升（pass@0.7 / winner Δ / arena Δ），绝对分值偏低不影响任何结论；补表反而引入版本管理成本 + 老报告分数无法跨版本比。
+- **有针对性地补表、不追求覆盖全古诗意象**（词表版本见 §4.2）：报告全用相对提升（pass@0.7 / winner Δ / arena Δ），绝对分值偏低不影响任何结论；版本管理成本由 §4.2 版本快照承担。
 - **`SCORE_PENALTY_FLOOR = 0.7`**（`config.py`）给多重扣分下限，防止一首诗被 penalty × clash × required 三重压死。
+
+### 4.2 THEME_SYNONYMS 版本快照
+
+`core.poem.theme.THEME_SYNONYMS` 是 `required_coeff` 判"用户明说的意象在诗里是否命中"的同义词底表。改表会让老报告的绝对分数漂移，需要冻结版本以便复现。
+
+**版本 v2 · 2026-07-04**（当前生产，commit 追 `A1 THEME_SYNONYMS 补充`）：
+- 37 主槽。相对 v1 新增 12 槽：`雨 / 云 / 烟 / 酒 / 灯 / 笛 / 渔 / 舟 / 钟 / 夕阳 / 故乡 / 愁`；`月` 槽内补 `圆月`（对齐 `vlm_hard_constraint.py` 的 `明月（圆月）` 判定 kw）。
+
+**版本 v1 · 2026-07-04 之前**（本 repo 内所有 `outputs/eval/*` 与 `eval/REPORT_*.md` 老报告依赖此版）：
+- 24 主槽：`雪 / 春 / 夏 / 秋 / 冬 / 梅 / 荷 / 菊 / 月 / 山 / 水 / 桃 / 柳 / 燕 / 蛙声 / 归雁 / 竹 / 松 / 兰 / 风筝 / 纸鸢 / 萧瑟 / 凄凉 / 星 / 夜`。
+- 若需按此版本复现某份老报告的绝对 `required_coeff` 值，`git show <commit-before-v2>:core/poem/theme.py` 可拿到完整词表。
+
+**已冻结报告不重跑的理由**：所有已发布 `REPORT_*.md`（含 `REPORT_arena_ablation_20260701.md`、`REPORT_main_n32x3run_20260624.md`、`REPORT_pairwise_win_delta_sweep_2026-06-30.md`、`REPORT_eval_refine_LoRA_n32_20260702.md`、`REPORT_vlm_hard_constraint_20260701.md`、`REPORT_eval_clip_dual_anchor_20260623.md`、`REPORT_autonomous_n5_20260627.md`）主结论都基于**相对指标**（pass@0.7 / winner Δ / arena Δ / hit-rate Δ），词表扩容仅平移绝对分数、不改变相对方向。v2 首次生效在本次 commit 之后的所有新 eval。
 
 ---
 
