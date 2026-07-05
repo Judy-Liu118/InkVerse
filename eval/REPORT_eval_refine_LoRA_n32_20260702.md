@@ -105,9 +105,9 @@ refine 生成新版诗时，其他 4 维度都受限制（用户约束/格律硬
 
 ### 3.2 与主跑 REPORT_main_n32x3run 的一致性
 
-主跑 (2026-06-24) 关键 finding：**LLM-as-judge 对格律权重 ≈ 0**（base 平仄仅 25.6% 但 pairwise 胜率反而更高）。评委权重接近全在 intent/imagery/aesthetics/**cohesion**。
+主跑 (2026-06-24) 相关 finding：**LLM-as-judge 对格律给低优先级权重**（base 平仄仅 25.6% 但 pairwise 胜率反而更高；retrospective controlled pair n=4-5，属初步推测，强结论待独立 64-pair 重跑——口径与 README / REPORT_F3 修正版一致，不宜表述为"权重 ≈ 0"）。评委权重主要落在 intent/imagery/aesthetics/**cohesion**。
 
-本报告 refine 主战场 = cohesion，**与 LLM judge 的注意力权重完全一致**——qwen-plus 作为 refine model 天然会 attend 到 cohesion，因为它作为 judge 也是 attend cohesion 而非平仄。**refine model 的注意力偏好和 scorer 的评分权重同源，导致 cohesion 成为主战场**。
+本报告 refine 主战场 = cohesion，**与 LLM judge 的注意力偏好方向一致**——qwen-plus 作为 refine model 天然会 attend 到 cohesion，因为它作为 judge 也更 attend cohesion 而非平仄。**refine model 的注意力偏好和 scorer 的评分权重同源，导致 cohesion 成为主战场**（此因果解释同样继承 F3 的"初步推测"强度）。
 
 ## 4. Rhyme 零效果的 root cause — feedback 硬约束
 
@@ -234,7 +234,7 @@ refine 换字时**轻微牺牲了 pingze**：
 | `core/agent/poem_refiner.py` | `refine_poem` 实现（含回滚容差 0.03）|
 | `core/agent/agent.py` `_auto_poem_critique` / `_auto_poem_feedback` | LLM 自动写诗评 → feedback（含"必须保留原韵脚"硬约束 —— §4 root cause 出处）|
 | `eval/REPORT_arena_ablation_20260701.md` | 交叉引用：擂台整体 loop 硬约束 +18.2pp 与本报告 refine 单步的关系（§7）|
-| `eval/REPORT_main_n32x3run_20260624.md` | 交叉引用：LLM-as-judge 对格律权重 ≈ 0，解释为何 refine 主战场是 cohesion 而非平仄（§3.2）|
+| `eval/REPORT_main_n32x3run_20260624.md` | 交叉引用：LLM-as-judge 对格律给低优先级权重（n=4-5 初步推测），解释为何 refine 主战场是 cohesion 而非平仄（§3.2）|
 
 ---
 

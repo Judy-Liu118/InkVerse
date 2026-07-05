@@ -4,7 +4,7 @@ _2026-06-23 数据落盘 · 2026-07-02 入库_
 
 ## 一句话结论
 
-> 生产 dual (α=0.6) 与 VLM oracle 的 Spearman ρ = **+0.365**，显著高于 prompt_only (+0.301)、稍低于 poem_only (+0.384)；α grid search 表明最优 α=0.8 处 ρ = **+0.414**，超过任一单 anchor 上限。**dual 设计被数据支持，但生产权重 α 仍有 +0.049 优化空间**。均值层 mean(dual) 与 mean(single) 差距 ≤ 0.003（配对胜率 53.3%）——**信号在排序相关性维度、不在数值均值维度**。
+> 生产 dual (α=0.6) 与 VLM oracle 的 Spearman ρ = **+0.365**，点估计高于 prompt_only (+0.301)、稍低于 poem_only (+0.384)——注意 n=15 时 Spearman ρ 的标准误约 0.29，这些差值均**未达统计显著**，只是方向一致的排序信号；α grid search 表明最优 α=0.8 处 ρ = **+0.414**，超过任一单 anchor 上限。**dual 设计被数据支持，但生产权重 α 仍有 +0.049 优化空间**。均值层 mean(dual) 与 mean(single) 差距 ≤ 0.003（配对胜率 53.3%）——**信号在排序相关性维度、不在数值均值维度**。
 
 ## 0. 导航
 
@@ -63,8 +63,8 @@ InkVerse 项目此前反复怀疑："dual CLIP 与 VLM ρ ≈ 0.10 长期不高�
 
 **关键读点**：
 
-1. **dual (+0.365) 显著优于 prompt_only (+0.301)**——差 +0.064，是本次 ablation 最硬的信号
-2. **dual (+0.365) 稍低于 poem_only (+0.384)**——差 -0.019，提示生产 α=0.6 权重可能未调优（§4 grid search 会验证）
+1. **dual (+0.365) 点估计优于 prompt_only (+0.301)**——差 +0.064，是本次 ablation 里方向最一致的信号；但 n=15 下 Spearman ρ 标准误约 0.29，该差值**未达统计显著**，定位为"方向性证据、待 n=30 复现"（§9 follow-up）
+2. **dual (+0.365) 稍低于 poem_only (+0.384)**——差 -0.019，提示生产 α=0.6 权重可能未调优（§4 grid search 会验证；同样受 n=15 限制）
 3. **对比历史 baseline**：此前 LoRA 生诗上 dual ρ ≈ 0.10。切换到千古名诗后 ρ 从 0.10 → 0.365，**3.6× 提升**——**dual 设计本身没问题，问题在诗质量（LoRA 是评测瓶颈，不是 backend）**
 
 ## 3. 均值与配对差值
@@ -114,7 +114,7 @@ CLIP raw cosine ∈ [−1, 1]，实践中中文诗歌 + 水墨图基本落在 [0
 
 ### 结论判定
 
-- **最优 α = 0.8**（内部最优）、ρ = **+0.414** ⭐ —— 显著 > max(单) = +0.384
+- **最优 α = 0.8**（内部最优）、ρ = **+0.414** ⭐ —— 点估计 > max(单) = +0.384；注意这是在 n=15 上对 11 个 α 取 max，存在多重比较放大噪声的风险，须经 §9 的 n=30 复现确认
 - α = 0.8 ∈ (0, 1) 且 ρ_dual > ρ_max_single → **dual 融合数学上有效**（不是"两个 anchor 相加"式的伪提升）
 - 生产 α = 0.6 处于**次优**（-0.019 vs poem_only、-0.049 vs 最优 α=0.8）
 
@@ -229,7 +229,7 @@ n=15 千古名诗 `keyword_word_count` 分布：
 | `outputs/eval/analyze_dual_20260623_201449.md` | α grid search 原始输出 |
 | `outputs/eval/clip_img_20260622_235822_bailian-qwenimage2/` | 前 10 张水墨图 |
 | `outputs/eval/clip_img_20260623_001405_bailian-qwenimage2/` | 后 5 张水墨图 |
-| `outputs/eval/REPORT_classics_15.md` | 15 首名诗 backend baseline 报告（未入库、和本报告互补：本报告 focus dual vs single，那份 focus backend single-shot 天花板）|
+| `outputs/eval/REPORT_classics_15.md` | 15 首名诗 backend baseline 报告（未入库、和本报告互补：本报告 focus dual vs single，那份 focus backend single-shot 基线——注意是一次生图、无反馈机制的基线表现，不是 backend 能力上限）|
 
 ---
 

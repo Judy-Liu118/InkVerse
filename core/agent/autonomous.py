@@ -30,7 +30,8 @@ class AutonomousConfig:
       用英文训练）的额外难度，推荐阈值如下：
         · 基础生成阈值（CLIP_THRESHOLD）：0.22 — 低于此建议重试
         · 自主模式目标（target_clip_score）：0.30 — 有挑战但可达
-        · 最高天花板（ViT-B/32 + 中文诗歌 + 水墨）：≈0.32
+        · 参考上界（ViT-B/32 + 中文诗歌 + 水墨）：≈0.32 — CLIPScore 论文
+          区间的经验外推，非本项目实测上限
       升级到 ViT-L/14 可平均提分 0.02~0.04。
     """
     target_clip_score:        float = 0.30   # CLIP 门控目标

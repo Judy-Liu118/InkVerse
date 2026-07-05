@@ -143,15 +143,17 @@ final_total = raw_total × penalty_c × clash_c × req_c
   - 落日（残阳/落日/夕阳/斜阳/暮日/夕照）
 - 必须意象：从 user_request 抽取"要有X和Y"模式，过 `get_imagery_synonyms` 查同义词表，每缺 1 个 → `coeff ×= 0.75`
 
-### 4.1 required_coeff 设计意图（与 LLM intent 分工）
+### 4.4 required_coeff 设计意图（与 LLM intent 分工）
 
-- **LLM 意图评分（权重 40%）是主判**：负责"意思到没到"的语义判断，抽象主题（思乡/壮志/无常）能覆盖，是主要打分来源。
+> 编号勘误：本节与下节曾误标为 §4.1/§4.2（与上文维度表/加权公式重号），2026-07-05 重编号为 §4.4/§4.5。旧提交信息 / 讨论中引用的「§4.1 required_coeff 设计意图」「§4.2 THEME_SYNONYMS 版本快照」即指本两节，内容未变。
+
+- **LLM 意图评分（`WEIGHT_INTENT`=0.30，为加权占比最高维度）是主判**：负责"意思到没到"的语义判断，抽象主题（思乡/壮志/无常）能覆盖，是主要打分来源。
 - **`required_coeff` 是硬约束保险**：只对具象要求（"要有柳树和燕子"这类）字面/同义词命中扣分，兜底 LLM 判"意到但字面漏"的情况。
 - **false negative（同义词表漏收）会误扣**，但对所有模型/所有 arm 一视同仁 → 是 **fair penalty**，不影响相对排名，只影响绝对分值。
-- **有针对性地补表、不追求覆盖全古诗意象**（词表版本见 §4.2）：报告全用相对提升（pass@0.7 / winner Δ / arena Δ），绝对分值偏低不影响任何结论；版本管理成本由 §4.2 版本快照承担。
+- **有针对性地补表、不追求覆盖全古诗意象**（词表版本见 §4.5）：报告全用相对提升（pass@0.7 / winner Δ / arena Δ），绝对分值偏低不影响任何结论；版本管理成本由 §4.5 版本快照承担。
 - **`SCORE_PENALTY_FLOOR = 0.7`**（`config.py`）给多重扣分下限，防止一首诗被 penalty × clash × required 三重压死。
 
-### 4.2 THEME_SYNONYMS 版本快照
+### 4.5 THEME_SYNONYMS 版本快照
 
 `core.poem.theme.THEME_SYNONYMS` 是 `required_coeff` 判"用户明说的意象在诗里是否命中"的同义词底表。改表会让老报告的绝对分数漂移，需要冻结版本以便复现。
 
@@ -302,6 +304,12 @@ user:
 
 调用：`compare_poems()` × 2 (forward + reverse) · 温度 0.1 · `max_tokens=10`
 
+> ⚠ **BREAKING · 口径变化（2026-07-05）**：`compare_poems` 引入弃权语义——adapter 异常或回复不含唯一 A/B 时返回 `None`（此前静默返回 `"A"`）。影响：
+> ① eval 侧新增「弃权」桶（任一方向 None → 该评委该对决弃权，不计入摇摆/胜负；全员弃权 → `all_abstain`，与 `all_swing` 同样排除出胜率分母）；
+> ② **历史报告（含 `REPORT_main_n32x3run_20260624.md` 的摇摆率 23%）把 API 失败与 position bias 混在同一个"摇摆"桶里**，与新口径的摇摆率不严格可比——旧数据不追溯重算，引用跨期对比时须注明；
+> ③ 生产擂台侧：判定失败从「隐式判 A（擂主）胜」改为「该挑战者作废、显式记日志守擂」，方向一致但计分路径不同（旧路径挑战者会吃 `PAIRWISE_LOSE_DELTA` 惩罚后仍参与比较，新路径直接作废）。
+> 动机：对齐 §5.3 BWS / 4 维评分自 `fb19f43` 起的弃权设计，消除"评委失败被当成 A 胜"的计票污染。
+
 ### 7.1 Prompt 全文
 
 ```
@@ -395,6 +403,8 @@ python -m eval.eval_poem \
     --scorer deepseek-v4-pro qwen-max glm-4-plus moonshot-v1-32k \
     --n 32 --candidates 5 --repeat 3
 ```
+
+**复现性边界（重要声明）**：本 pipeline 未固定任何随机 seed——LoRA 候选生成（temperature=0.8）、API 评委采样、BWS 候选打散（`random.shuffle`）均无种子。因此**同命令重跑不产生逐字节相同的结果**；本文档所称"复现"指**统计层复现**：3 run mean ± std 框架下，主要指标应落在报告标注的 std 带内（主报告 std 0.002-0.06）。若未来需要更强的复现保证，应在新 run 中记录并固定 seed，并在报告 setup 表中新增 seed 字段（不追溯已冻结报告）。
 
 预估调用量（每 run）：
 - BWS：`n × len(models) × len(judges) = 32 × 4 × 4 = 512`
