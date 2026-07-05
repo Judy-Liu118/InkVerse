@@ -1,12 +1,38 @@
 """诗歌修改与守擂进化 Mixin。"""
 from __future__ import annotations
 
+import random
+
 from typing import Any, Dict, List
 
 from core.agent.state import AgentState
 from core.logger import get_logger
 
 _log = get_logger(__name__)
+
+
+def pairwise_judge_randomized(scorer, champion: str, challenger: str,
+                              user_request: str, adapter,
+                              rng: random.Random = random):
+    """A/B 位随机化的单向 pairwise 判定。
+
+    返回 (chal_won, chal_position)：
+      · chal_won ∈ {True, False, None}——None 表示评委弃权（compare_poems 返 None）
+      · chal_position ∈ {"A", "B"}——本次挑战者被随机分到的位置
+
+    动机（2026-07-06）：旧布局固定"擂主=A、挑战者=B"，单向单次判定下 judge 的
+    位置偏置（方向未确认，见 sweep 报告 §6.3 #1 与 B1 探针）会被系统性计入
+    攻擂率。随机化不消除单次判定的位置效应，但把它中和成对称噪声——对偏置
+    方向与幅度均不敏感，且零额外 API 成本。
+    ⚠ BREAKING（行为）：攻擂判定自此与历史 run（含 arena ablation arm B、
+    delta sweep）的固定 B 位布局不同，跨期对比攻擂率时须注明。
+    """
+    chal_at_b = rng.random() < 0.5
+    if chal_at_b:
+        winner = scorer.compare_poems(champion, challenger, user_request, adapter)
+        return (None if winner is None else winner == "B"), "B"
+    winner = scorer.compare_poems(challenger, champion, user_request, adapter)
+    return (None if winner is None else winner == "A"), "A"
 
 
 class _PoemRefineMixin:
@@ -275,21 +301,24 @@ class _PoemRefineMixin:
             return None
 
         chal_local = self._local_score_champion(challenger, num_lines, chars_per_line, state=state)
-        winner = self.poem_gen.scorer.compare_poems(
-            champion, challenger, state.user_input, self.score_adapter,
+        chal_won, chal_pos = pairwise_judge_randomized(
+            self.poem_gen.scorer, champion, challenger,
+            state.user_input, self.score_adapter,
         )
-        if winner is None:
+        if chal_won is None:
             # 评委弃权（API 异常 / 回复不可解析）→ 保守处理：本挑战者作废、擂主守擂。
             # 旧版此处会拿到默认 "A"（隐式守擂），现在显式化并落日志。
             _log.info("  挑战者%s pairwise 判定失败（评委弃权）→ 擂主守擂", direction_label)
             state.log("擂台", f"第{round_num}轮{direction_label}·pairwise 弃权",
                       "评委判定失败，本轮该挑战者作废，擂主守擂")
             return None
-        chal_won = (winner == "B")
+        _log.info("  挑战者%s 位=%s pairwise=%s", direction_label, chal_pos,
+                  "胜" if chal_won else "败")
         delta = self._pairwise_delta(chal_won)
         combined = chal_local["total"] + delta
         return {"poem": challenger, "local": chal_local,
-                "pairwise_won": chal_won, "delta": delta, "combined": combined,
+                "pairwise_won": chal_won, "pairwise_position": chal_pos,
+                "delta": delta, "combined": combined,
                 "direction": direction_label}
 
     def _evolve_champion(self, state: AgentState, refine_adapter=None,

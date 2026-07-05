@@ -391,7 +391,7 @@ LLM-driven 路径在产品 UI 已可勾选启用（`app.py` "🤖 全自主创�
 
 ```bash
 pytest tests/ -v
-# 158 passed in ~3s（全部离线，不触发真实 LLM / 图像 API）
+# 164 passed in ~5s（全部离线，不触发真实 LLM / 图像 API）
 ```
 
 覆盖：
@@ -405,6 +405,7 @@ pytest tests/ -v
 - `test_metrics.py` —— eval 指标数值正确性（相关性 / 配对差值 / 通过率）
 - `test_vlm_judge.py` —— VLM ground-truth judge 解析、归一化、错误兜底
 - `test_build_f3_controlled.py` —— F3 controlled pair 筛选边界条件防回归
+- `test_poem_refiner.py` —— 擂台 pairwise A/B 位随机化：位置分配、胜负映射、弃权透传
 
 ## 依赖
 
