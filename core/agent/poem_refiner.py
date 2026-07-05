@@ -278,6 +278,13 @@ class _PoemRefineMixin:
         winner = self.poem_gen.scorer.compare_poems(
             champion, challenger, state.user_input, self.score_adapter,
         )
+        if winner is None:
+            # 评委弃权（API 异常 / 回复不可解析）→ 保守处理：本挑战者作废、擂主守擂。
+            # 旧版此处会拿到默认 "A"（隐式守擂），现在显式化并落日志。
+            _log.info("  挑战者%s pairwise 判定失败（评委弃权）→ 擂主守擂", direction_label)
+            state.log("擂台", f"第{round_num}轮{direction_label}·pairwise 弃权",
+                      "评委判定失败，本轮该挑战者作废，擂主守擂")
+            return None
         chal_won = (winner == "B")
         delta = self._pairwise_delta(chal_won)
         combined = chal_local["total"] + delta

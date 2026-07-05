@@ -391,7 +391,7 @@ LLM-driven 路径在产品 UI 已可勾选启用（`app.py` "🤖 全自主创�
 
 ```bash
 pytest tests/ -v
-# 35 passed in ~6s
+# 158 passed in ~3s（全部离线，不触发真实 LLM / 图像 API）
 ```
 
 覆盖：
@@ -401,6 +401,10 @@ pytest tests/ -v
 - `test_clip_weights.py` —— CLIP 双锚点稀疏关键词自适应权重切换
 - `test_tools.py` —— ToolRegistry 注册/查找/调度、Function Calling schema 形状
 - `test_prompts.py` —— prompt YAML 解析、变量插值、缺变量 fail-fast、loader 缓存
+- `test_controller.py` —— LLM-driven 改图循环 controller：JSON 解析兜底、非法工具 fallback、dispatch 分发
+- `test_metrics.py` —— eval 指标数值正确性（相关性 / 配对差值 / 通过率）
+- `test_vlm_judge.py` —— VLM ground-truth judge 解析、归一化、错误兜底
+- `test_build_f3_controlled.py` —— F3 controlled pair 筛选边界条件防回归
 
 ## 依赖
 

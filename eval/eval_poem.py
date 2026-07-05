@@ -271,20 +271,27 @@ def _cross_model_pairwise(
             matchups.append({"model_a": ma, "model_b": mb,
                              "poem_a": poem_a, "poem_b": poem_b,
                              "judge_votes": {}, "winner": "skip",
-                             "ma_votes": 0, "mb_votes": 0, "swing_count": 0})
+                             "ma_votes": 0, "mb_votes": 0, "swing_count": 0,
+                             "abstain_count": 0})
             continue
 
         judge_votes: Dict[str, Dict[str, Any]] = {}
-        ma_votes, mb_votes, swing = 0, 0, 0
+        ma_votes, mb_votes, swing, abstain = 0, 0, 0, 0
         for label, jadapter in judges:
             try:
                 v_fwd = scorer.compare_poems(poem_a, poem_b, item.user_input, jadapter)
                 v_rev = scorer.compare_poems(poem_b, poem_a, item.user_input, jadapter)
             except Exception as e:
-                v_fwd, v_rev = "A", "A"
+                v_fwd, v_rev = None, None
                 print(f"          {label} ⚠ compare 异常：{e}")
-            # 一致性判定
-            if v_fwd == "A" and v_rev == "B":
+            # 一致性判定（2026-07-05 起 compare_poems 支持 None 弃权：
+            # 任一方向弃权 → 该评委本对决整体弃权，不计入摇摆——历史报告的
+            # 摇摆率把 API 失败混进了 position bias，此处起两者分离）
+            if v_fwd is None or v_rev is None:
+                judge_pick = "abstain"
+                consistent = False
+                abstain += 1
+            elif v_fwd == "A" and v_rev == "B":
                 # 两次都说 ma 更好（fwd 选 A=ma；rev 选 B=ma）
                 judge_pick = ma
                 consistent = True
@@ -308,19 +315,21 @@ def _cross_model_pairwise(
         elif mb_votes > ma_votes:
             winner = mb
         elif ma_votes == 0 and mb_votes == 0:
-            winner = "all_swing"
+            winner = "all_swing" if swing else "all_abstain"
         else:
             winner = "tie"
         consistent_total = ma_votes + mb_votes
-        consistency_rate = consistent_total / len(judges) if judges else 0.0
-        print(f"        {ma} vs {mb}: {ma}={ma_votes} {mb}={mb_votes} 摇摆={swing} → {winner} "
-              f"(一致率 {consistency_rate:.0%})")
+        judged = len(judges) - abstain  # 弃权评委不进一致率分母
+        consistency_rate = consistent_total / judged if judged else 0.0
+        print(f"        {ma} vs {mb}: {ma}={ma_votes} {mb}={mb_votes} 摇摆={swing} "
+              f"弃权={abstain} → {winner} (一致率 {consistency_rate:.0%})")
         matchups.append({
             "model_a": ma, "model_b": mb,
             "poem_a": poem_a, "poem_b": poem_b,
             "judge_votes": judge_votes,
             "winner": winner,
             "ma_votes": ma_votes, "mb_votes": mb_votes, "swing_count": swing,
+            "abstain_count": abstain,
             "consistency_rate": consistency_rate,
         })
     return matchups
@@ -386,7 +395,9 @@ def _aggregate(per_input_results: List[Dict[str, Any]],
                 wins += 1
             elif m["winner"] == "tie":
                 ties += 1
-            elif m["winner"] == "all_swing":
+            elif m["winner"] in ("all_swing", "all_abstain"):
+                # all_abstain（全员弃权，2026-07-05 起新桶）与 all_swing 同属
+                # "无有效结论"，一并排除出胜率分母
                 all_swing += 1
             else:
                 losses += 1
@@ -515,7 +526,7 @@ def _render_markdown(args, models, aggs, results_per_model, matchups_per_input,
             entry = pair_index[key]
             if m["winner"] == "tie":
                 entry["ties"] += 1
-            elif m["winner"] == "all_swing":
+            elif m["winner"] in ("all_swing", "all_abstain"):
                 entry["all_swing"] += 1
             elif m["winner"] == key[0]:
                 entry["a_wins"] += 1
@@ -693,12 +704,16 @@ def _render_markdown(args, models, aggs, results_per_model, matchups_per_input,
                     f_, r_ = info.get("forward", "?"), info.get("reverse", "?")
                     if info.get("consistent"):
                         parts.append(f"{lbl}→{info.get('pick')}({f_}/{r_})")
+                    elif info.get("pick") == "abstain":
+                        parts.append(f"{lbl}→**弃权**({f_}/{r_})")
                     else:
                         parts.append(f"{lbl}→**摇摆**({f_}/{r_})")
                 vstr = ", ".join(parts)
                 winner_lbl = mu["winner"]
                 if winner_lbl == "all_swing":
                     winner_lbl = "**全员摇摆 / 无结论**"
+                elif winner_lbl == "all_abstain":
+                    winner_lbl = "**全员弃权 / 无结论**"
                 elif winner_lbl == "tie":
                     winner_lbl = "平"
                 md.append(f"- `{mu['model_a']}` vs `{mu['model_b']}`: "

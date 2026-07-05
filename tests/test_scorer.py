@@ -360,3 +360,56 @@ def test_arena_from_gated_more_than_top_n_no_keyerror(scorer):
     # 不论 champion 落在 idx 0..4 哪个，结果都得有 champion_final（float）
     assert isinstance(result["champion_final"], float)
     assert result["gated_count"] == 5
+
+
+# ── compare_poems 弃权语义（2026-07-05 引入，对齐 BWS/4 维评分的 fb19f43 设计）──
+def _compare(scorer, reply=None, raises=False):
+    adapter = MagicMock()
+    if raises:
+        adapter.generate.side_effect = RuntimeError("api down")
+    else:
+        adapter.generate.return_value = reply
+    return scorer.compare_poems("诗甲", "诗乙", "春景", adapter)
+
+
+def test_compare_poems_clean_a(scorer):
+    assert _compare(scorer, "A") == "A"
+
+
+def test_compare_poems_clean_b_with_noise(scorer):
+    """回复含 B 且不含 A（如 "答案：B"）→ B。"""
+    assert _compare(scorer, "答案：B") == "B"
+
+
+def test_compare_poems_lowercase_normalized(scorer):
+    assert _compare(scorer, " b ") == "B"
+
+
+def test_compare_poems_both_letters_abstains(scorer):
+    """同时含 A 和 B（无法判定）→ None 弃权。旧版会静默判 A 胜。"""
+    assert _compare(scorer, "A还是B都不错") is None
+
+
+def test_compare_poems_neither_letter_abstains(scorer):
+    assert _compare(scorer, "两首都很好") is None
+
+
+def test_compare_poems_empty_reply_abstains(scorer):
+    assert _compare(scorer, "") is None
+
+
+def test_compare_poems_adapter_exception_abstains(scorer):
+    """adapter 异常 → None 弃权。旧版会静默判 A 胜（污染计票）。"""
+    assert _compare(scorer, raises=True) is None
+
+
+def test_arena_from_gated_abstain_no_vote(scorer):
+    """pairwise 全弃权：不计任何 arena 票，冠军按本地分 + arena_score=0 排序，
+    不抛异常、winner 记为 None。"""
+    gated = [_gated_entry(0, total=0.85), _gated_entry(1, total=0.80)]
+    adapter = MagicMock()
+    adapter.generate.return_value = "无法判断"
+    result = scorer.arena_from_gated(gated, "春景", adapter)
+    assert result["champion_idx"] == 0  # 本地分高者胜（无 pairwise 信息）
+    assert result["arena_results"][0]["winner"] is None
+    assert isinstance(result["champion_final"], float)

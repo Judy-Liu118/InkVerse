@@ -357,8 +357,8 @@ class PoemScorer:
         """硬约束保险：字面 + 同义词命中检查。
 
         设计意图（跟 LLM intent 分工）：
-          · LLM 意图评分（权重 40%）负责"意思到没到"的语义主判，抽象主题（思乡/壮志）
-            也能覆盖，是主要打分来源；
+          · LLM 意图评分（WEIGHT_INTENT=0.30，加权占比最高）负责"意思到没到"的
+            语义主判，抽象主题（思乡/壮志）也能覆盖，是主要打分来源；
           · 本方法只对具象要求（"要有柳树和燕子"这类）做兜底扣分，命中失败 ×0.75；
           · false negative（同义词表漏收 → 判为未命中）会误扣，但**对所有模型/所有
             arm 都成立**，是 fair penalty，不影响相对排名；
@@ -371,7 +371,7 @@ class PoemScorer:
                       "风格", "色调", "感觉", "氛围", "情感", "情调"}
         idx_tag = f"[候选{candidate_index}] " if candidate_index else ""
 
-        # "以X为主题" 不再用正则做字面匹配——LLM 意图评分（权重 40%）已负责判断
+        # "以X为主题" 不再用正则做字面匹配——LLM 意图评分（WEIGHT_INTENT=0.30）已负责判断
         # 主题是否命中。抽象主题如"思乡""壮志"等无法靠字面匹配覆盖，正则反而误伤。
         theme_m = re.search(r"以(.{1,4})为主题", user_request)
         if theme_m:
@@ -1021,10 +1021,14 @@ C. 明显缺失的要素（若无请写"无"）："""
             a, b = gated[ai], gated[bi]
             winner = self.compare_poems(a["poem"], b["poem"],
                                         user_request, adapter)
-            win_idx = a["idx"] if winner == "A" else b["idx"]
-            arena_wins[win_idx] += 1
             arena_results.append({"a_idx": a["idx"], "b_idx": b["idx"],
                                   "winner": winner})
+            if winner is None:
+                _log.info("  诗%d vs 诗%d → 评委弃权，本场不计票",
+                          a["idx"] + 1, b["idx"] + 1)
+                continue
+            win_idx = a["idx"] if winner == "A" else b["idx"]
+            arena_wins[win_idx] += 1
             _log.info("  诗%d vs 诗%d → %s 胜", a["idx"] + 1, b["idx"] + 1,
                       "A" if winner == "A" else "B")
 
@@ -1159,10 +1163,14 @@ C. 明显缺失的要素（若无请写"无"）："""
             a, b = gated[ai], gated[bi]
             winner = self.compare_poems(a["poem"], b["poem"],
                                         user_request, adapter)
-            win_idx = a["idx"] if winner == "A" else b["idx"]
-            arena_wins[win_idx] += 1
             arena_results.append({"a_idx": a["idx"], "b_idx": b["idx"],
                                   "winner": winner})
+            if winner is None:
+                _log.info("  诗%d vs 诗%d → 评委弃权，本场不计票",
+                          a["idx"] + 1, b["idx"] + 1)
+                continue
+            win_idx = a["idx"] if winner == "A" else b["idx"]
+            arena_wins[win_idx] += 1
             _log.info("  诗%d vs 诗%d → %s 胜", a["idx"] + 1, b["idx"] + 1,
                       "A" if winner == "A" else "B")
 
@@ -1213,8 +1221,20 @@ C. 明显缺失的要素（若无请写"无"）："""
         }
 
     def compare_poems(self, poem_a: str, poem_b: str, user_request: str,
-                      adapter) -> str:
-        """成对决斗：返回 "A" 或 "B"。"""
+                      adapter) -> str | None:
+        """成对决斗：返回 "A" / "B"；判定失败返回 None（评委弃权）。
+
+        弃权语义（2026-07-05 引入，对齐 BWS / 4 维评分的弃权设计 `fb19f43`）：
+          · adapter 调用异常 → None
+          · 回复同时含 A 和 B、或都不含 → None
+        旧版在上述失败下静默返回 "A"，会把评委失败当成 A 胜污染计票：
+          · eval 双向 pairwise 里单侧失败可伪造"一致票"，且历史摇摆率含 API 失败混杂
+          · 生产擂台 champion 恒在 A 位，失败被隐式算作守擂
+        调用方义务：看到 None 必须显式处理（eval 记弃权不计票；生产记
+        "判定失败 → 擂主守擂" 并落日志）。
+        ⚠ 口径变化：本改动使 2026-07-05 之后 eval run 的摇摆率/胜率与历史报告
+        不严格可比，详见 METHODOLOGY §7。
+        """
         prompt = self._PAIRWISE_PROMPT.format(
             user_request=user_request, poem_a=poem_a, poem_b=poem_b,
         )
@@ -1224,13 +1244,17 @@ C. 明显缺失的要素（若无请写"无"）："""
         ]
         try:
             reply = adapter.generate(messages, max_tokens=10, temperature=0.1)
-            reply = reply.strip().upper()
-            if "B" in reply and "A" not in reply:
-                return "B"
-            return "A"
+            reply = (reply or "").strip().upper()
         except Exception as e:
-            _log.warning("Pairwise 比较异常: %s，默认判 A 胜", e)
+            _log.warning("Pairwise 比较异常: %s → 评委弃权", e)
+            return None
+        has_a, has_b = "A" in reply, "B" in reply
+        if has_a and not has_b:
             return "A"
+        if has_b and not has_a:
+            return "B"
+        _log.warning("Pairwise 回复无法解析: %r → 评委弃权", reply[:40])
+        return None
 
     # ── BWS（Best-Worst-Scaling 简化版：N 候选盲选 1 个 best）─────────────
 
