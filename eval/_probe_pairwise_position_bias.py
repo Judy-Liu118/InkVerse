@@ -17,9 +17,15 @@ pairwise——擂主恒在 A 位、挑战者恒在 B 位；而 eval 侧（METHOD
   · position_B_follow ：fwd=B, rev=B → 永远选 B 位（生产布局下会推高攻擂率）
   · abstain           ：任一向弃权（compare_poems 返 None）
 
-⚠ 选择偏置声明：JSON 只存了**攻擂成功**的对局（落败挑战者文本未落盘），
-本探针测的是"judge 在这些历史 B 胜对局上的位置一致性"，不是无偏的
-position bias 全貌——若要无偏估计需 B2（无图擂台重跑 + 位置随机化）。
+⚠ 选择-复现混杂声明（2026-07-06 复盘补强，比初版"选择偏置"更根本）：
+JSON 只存了**攻擂成功**的对局——入选条件 = "当年 forward 布局下 judge 说了 B"。
+temp=0.1 下重判 forward 高度复现原判（首跑 46/53 仍=B），因此：
+  · fwd=A 的两类（content_champion / position_A_follow）被机制性压低，
+    B_follow : A_follow 的不对称**混杂了选择-复现伪效应**——零位置偏置下
+    该设计也会产出同形状的不对称，McNemar p 值不能按面值采信；
+  · "B 位胜率 vs A 位胜率"之差同理（前者含复现成分，后者是新鲜判定）。
+本探针的产出只能定位为"位置效应迹象"。无偏确认需改用与 judge 选择无关的
+新鲜对局（B1b：如 armA vs armB 终诗配对，双向判定），或 B2 全新擂台重跑。
 
 API 消耗：len(pairs) × 2 次 qwen-plus chat（本仓库三份 JSON 共 53 对 → 106 次）。
 不消耗任何图像配额。
