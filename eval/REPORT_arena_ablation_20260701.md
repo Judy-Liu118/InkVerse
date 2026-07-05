@@ -11,7 +11,7 @@
 | 章节 | 内容 |
 |---|---|
 | §1 | 实验设置：arm A vs arm B 流程差异 + 两池数据来源 |
-| §2 | 四条核心证据（CLIP × 2 + 硬约束 × 2），主池 + 辅池并列；§2.5 显著性分析（McNemar + bootstrap CI，2026-07-05 补） |
+| §2 | 四条核心证据（CLIP × 2 + 硬约束 × 2），主池 + 辅池并列；§2.5 显著性分析（2026-07-05 补）· §2.6 跨家族 VLM 复核（2026-07-06 补） |
 | §3 | rich/sparse 硬约束拆分（主池 + 辅池）|
 | §4.1 | 主池 22 主题双图并排（图 + 诗 + CLIP + VLM 判定）|
 | §4.2 | 辅池 10 主题双图并排 |
@@ -165,6 +165,19 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 2. **但方向证据是多重一致的**：keyword 级 10:4、主题级 9:3、rich/sparse 两个 density 拆分同向（§3）、5 个跨池重合主题 4/5 同向（§6.1）。作为**方向性证据**它仍是本报告最强的一条——只是「方向性强」≠「统计定论」。
 3. **判定力估算**：若真实效应确为 +18pp 量级，样本扩到约 2 倍（≈66 keyword，即再补一个 n=22 池，如 §8 已列的 03-03 补跑）即大概率可过显著阈值。在扩样完成前，工程决策「保留擂台」的依据是**方向一致性 + 机制可解释（§5.2 案例）+ 保留成本低**，而非 p 值。
 4. 本节结论与 §5.1 的 kw 严格度敏感度分析（松判下 Δ 降至 +12.1pp）叠加读：+18.2pp 的点估计同时有**统计不确定性**（本节）与**kw 定义敏感性**（§5.1）两层折扣，引用本报告时请带上这两层。
+
+## §2.6 跨家族 VLM 复核（2026-07-06 补，44 次 glm-4v-plus 调用）
+
+> 动机：主池硬约束 oracle（qwen-vl-max）与被评 pipeline 全链同家族（qwen-image 生图 + qwen-plus refine），存在 self-bias 质疑。用智谱 glm-4v-plus 对同 44 张主池图重判（`--vlm glm-4v-plus`，同 prompt 同温度）。
+
+| oracle | arm A 命中 | arm B 命中 | Δ (B−A) | McNemar p | bootstrap 95% CI |
+|---|---|---|---|---|---|
+| qwen-vl-max（原报告） | 20/33 = 60.6% | 26/33 = 78.8% | **+18.2pp** | 0.180 | [-5.9, +41.9]pp |
+| **glm-4v-plus（跨家族）** | 20/33 = 60.6% | 25/33 = 75.8% | **+15.2pp** | 0.227 | [-6.1, +34.4]pp |
+
+- **方向跨家族复现**：Δ 同向（+15.2 vs +18.2pp），量级相近；逐 keyword 判定一致率 **86.4%**（57/66），分歧无系统性方向（qwen✓glm✗ 5 次 vs qwen✗glm✓ 4 次）——**"+18.2pp 是同家族 oracle 幻觉"的假设可以排除**。
+- 统计显著性仍未过阈值（两个 oracle 都是，n=33 所限）——与 §2.5 定位一致：**方向性强证据、跨 oracle 稳健、待扩样定论**。
+- 数据：`outputs/eval/vlm_hard_constraint_arm_ab_main_n22_glm4v_20260706_000935.json`；复现：`python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n22.json --delta arm_A arm_B --vlm glm-4v-plus`。
 
 ## §3 rich / sparse 硬约束拆分
 
@@ -656,7 +669,7 @@ sweep 报告 §6.3 攻擂率 49-75% 表明擂台 pairwise judge 偏向"改"而�
 - **主池 n=22 是本报告主要结论支撑**：+18.2 pp 硬约束提升方向证据多重一致（keyword/主题/density/跨池重合主题四层同向），但 n=33 keyword 配对检验 p≈0.18、CI 跨零（§2.5）——样本量不足以下统计定论，扩样路径见 §8。
 - **辅池 n=10 是补充证据**：与主池方向冲突，主要归因于 backend 差异 + 采样噪声（§6.1、§6.2）。
 - **单 backend 主池 n=22 不足以推广跨 backend**：主池辅池 5 主题共有对比显示 backend 会调制擂台效果。要断言"擂台在 04-22 backend 上有净收益"是稳的，但要说"擂台在所有 backend 上都有净收益"需要至少一个第三方 backend 验证。
-- **单 VLM oracle**（qwen-vl-max）：硬约束命中率结论受 VLM 判断分布制约。VLM 单次判定有噪声，同图重跑 3 次可能给出不同 present 值。
+- **~~单 VLM oracle~~ 已跨家族复核**（2026-07-06）：glm-4v-plus 重判同 44 张图，Δ +15.2pp 同向、逐 keyword 一致率 86.4%（§2.6）——同家族 self-bias 质疑解除。VLM 单次判定仍有噪声（同图重跑可能给出不同 present 值），此局限跨 oracle 共有。
 - **arena 海选阶段两 arm 有随机性**：LoRA 生成 5 候选是有 temperature，两 arm 各跑一次 arena，冠军可能不同。这意味着 arm A vs arm B 的差异**混合了 "arena 抽签差 + 擂台差"**。本次 setup 无法完全解耦（要解耦需固定 arena 冠军、只 A/B 擂台部分）。**尽管如此，18.2 pp 的硬约束差距大于"arena 抽签"通常能贡献的噪声量级**（注：此处的量级判断是定性推断，未经对照实验量化，见 §8 中优先级"固定 arena 冠军做纯擂台 A/B"）。
 - **主池辅池主题重合的 5 主题**：`get_benchmark(n=32)` 与 `get_benchmark(n=10)` 独立采样，有 5 主题名称相同。这 5 主题在两池分别以 04-22 / 03-03 backend 生成，天然地做了 backend 敏感度检查（§6.1）。合并成"n=32 全池 CLIP mean"不严谨，因为跨 backend 平均无意义，本报告刻意不做。
 
@@ -676,7 +689,7 @@ sweep 报告 §6.3 攻擂率 49-75% 表明擂台 pairwise judge 偏向"改"而�
 
 ### 低优先级
 
-- **VLM oracle 多样化**：目前只有 qwen-vl-max。补 glm-4v 或 gpt-4v 交叉验证，可以进一步硬化主池 +18.2 pp 结论。
+- ✅ **~~VLM oracle 多样化~~ 主池已完成**（2026-07-06，§2.6）：glm-4v-plus 跨家族复核，Δ +15.2pp 同向、一致率 86.4%。剩余可选项：gpt-4v 第三方（需新 key）、辅池 30 张 sweep 图复跑（+30 次调用）。
 - **攻擂率调优**：主池 arm B 平均攻擂率 49.2%，健康区间是 15-40%。当前 PAIRWISE_WIN_DELTA=0.17 让挑战者太容易胜。sweep §6.3 已 surface，正交 follow-up。
 
 ---
