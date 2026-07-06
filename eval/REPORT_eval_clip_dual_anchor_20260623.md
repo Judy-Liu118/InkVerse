@@ -166,7 +166,7 @@ n=15 千古名诗 `keyword_word_count` 分布：
 
 | 7.1 江雪 · dual 与 VLM 同向 | 7.2 使至塞上 · CLIP 维度盲区 | 7.3 九月九日 · single-shot 局限 |
 |---|---|---|
-| ![江雪](assets/report_images/clip_classics_20260623/江雪_dual033_vlm095.jpg) | ![使至塞上](assets/report_images/clip_classics_20260623/使至塞上_dual028_vlm085.jpg) | ![九月九日](assets/report_images/clip_classics_20260623/九月九日_dual029_vlm065.jpg) |
+| ![江雪](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/clip_classics_20260623/%E6%B1%9F%E9%9B%AA_dual033_vlm095.jpg) | ![使至塞上](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/clip_classics_20260623/%E4%BD%BF%E8%87%B3%E5%A1%9E%E4%B8%8A_dual028_vlm085.jpg) | ![九月九日](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/clip_classics_20260623/%E4%B9%9D%E6%9C%88%E4%B9%9D%E6%97%A5_dual029_vlm065.jpg) |
 | VLM 0.95 · dual 0.33 | VLM 0.85 · dual **0.28** | VLM **0.65** · dual 0.29 |
 
 ### 7.1 江雪（VLM 0.95 · dual 0.33）—— dual 与 VLM 同向

@@ -54,7 +54,7 @@
 
 以下 10 个主题，每个主题展示 3 个 delta 各自的**最终诗**、**最终图**（autonomous flow 中 CLIP 最高的那一张）与 **CLIP 分**。粗体 ✓ 标注本主题 CLIP 最高的 delta。**诗 / 标题 / 图像文件名均从 JSON 真实读出**（0.17 诗来自日志解析，已交叉验证与图像首句一致）。
 
-> ℹ️ 本节含 30 张图。GitHub 在线预览一次性加载大量图片时，raw 端点限流可能造成**零星随机裂图**（每次刷新失败的是不同几张）——刷新页面即恢复，本地 clone 查看无此问题。
+> ℹ️ 本节含 30 张图，经 jsDelivr CDN 加载（GitHub raw 端点限流/跨境访问不稳，2026-07-07 起切换）。图片资产的 source of truth 仍入库于 `eval/assets/report_images/`。
 
 
 ---
@@ -67,7 +67,7 @@
 | **攻擂** | 0/3 | 1/2 | 2/3 |
 | **诗名** | 春雨野居 | 春柳燕烟 | 春燕梳柳 |
 | **终诗** | 红艳桃花发<br>青房绿杏开<br>东风吹细雨<br>飞入野人家 | 风暖莺梭柳<br>云轻燕剪烟<br>花飞分远近<br>水自向东流 | 一枝花欲绽<br>数声雷已休<br>新燕裁云过<br>东风梳柳柔 |
-| **图** | ![](assets/report_images/20260630_205747/delta_0.14/01_红艳桃花发_gen1_clip0.314.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/01_风暖莺梭柳_gen1_clip0.326.jpg) | ![](assets/report_images/20260630_202046/delta_0.20/01_一枝花欲绽_gen2_clip0.302.jpg) |
+| **图** | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_205747/delta_0.14/01_%E7%BA%A2%E8%89%B3%E6%A1%83%E8%8A%B1%E5%8F%91_gen1_clip0.314.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_131315/delta_0.17/01_%E9%A3%8E%E6%9A%96%E8%8E%BA%E6%A2%AD%E6%9F%B3_gen1_clip0.326.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/01_%E4%B8%80%E6%9E%9D%E8%8A%B1%E6%AC%B2%E7%BB%BD_gen2_clip0.302.jpg) |
 
 ---
 
@@ -79,7 +79,7 @@
 | **攻擂** | 2/3 | 2/2 | 2/2 |
 | **诗名** | 征戍怀古 | 征戍夜寒 | 征戍秋思 |
 | **终诗** | 白骨深埋野草秋<br>行人不识旧王侯<br>当年旗卷风雷烈<br>今日空亭立暮丘 | 孤云衔月过荒陲<br>冷焰摇风草自悲<br>铁甲凝霜千帐寂<br>寒笳裂夜故人衣 | 客心摇落故园秋<br>孤影穿云暮色流<br>霜径千重归梦断<br>流光暗度几番休 |
-| **图** | ![](assets/report_images/20260630_205747/delta_0.14/02_白骨深埋野草秋_gen2_clip0.326.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/02_孤云衔月过荒陲_gen2_clip0.304.jpg) | ![](assets/report_images/20260630_202046/delta_0.20/02_客心摇落故园秋_gen1_clip0.276.jpg) |
+| **图** | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_205747/delta_0.14/02_%E7%99%BD%E9%AA%A8%E6%B7%B1%E5%9F%8B%E9%87%8E%E8%8D%89%E7%A7%8B_gen2_clip0.326.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_131315/delta_0.17/02_%E5%AD%A4%E4%BA%91%E8%A1%94%E6%9C%88%E8%BF%87%E8%8D%92%E9%99%B2_gen2_clip0.304.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/02_%E5%AE%A2%E5%BF%83%E6%91%87%E8%90%BD%E6%95%85%E5%9B%AD%E7%A7%8B_gen1_clip0.276.jpg) |
 
 ---
 
@@ -91,7 +91,7 @@
 | **攻擂** | 0/2 | 2/2 | 1/4 |
 | **诗名** | 春江桃莺 | 春晓桃莺 | 春日山亭 |
 | **终诗** | 桃树如云积<br>江花似锦堆<br>莺声随雨转<br>蝶梦逐风回<br>日暖池边柳<br>风吹屋上梅<br>故园千万里<br>相望一徘徊 | 春色染青畴<br>风回燕影稠<br>桃腮初破晓<br>柳眼乍含羞<br>蝶戏新晴暖<br>莺梭旧径幽<br>谁家双玉笛<br>吹落一溪流 | 桃李何须种<br>春风自吐英<br>山翁常独坐<br>谁共嗅香清<br>暖日穿松影<br>新莺隔竹鸣<br>旧时王谢燕<br>犹绕故园亭 |
-| **图** | ![](assets/report_images/20260630_205747/delta_0.14/03_桃树如云积_gen1_clip0.326.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/03_春色染青畴_gen1_clip0.335.jpg) | ![](assets/report_images/20260630_202046/delta_0.20/03_桃李何须种_gen1_clip0.315.jpg) |
+| **图** | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_205747/delta_0.14/03_%E6%A1%83%E6%A0%91%E5%A6%82%E4%BA%91%E7%A7%AF_gen1_clip0.326.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_131315/delta_0.17/03_%E6%98%A5%E8%89%B2%E6%9F%93%E9%9D%92%E7%95%B4_gen1_clip0.335.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/03_%E6%A1%83%E6%9D%8E%E4%BD%95%E9%A1%BB%E7%A7%8D_gen1_clip0.315.jpg) |
 
 ---
 
@@ -103,7 +103,7 @@
 | **攻擂** | 1/2 | 2/3 | 2/3 |
 | **诗名** | 客愁 | 客愁 | 客愁 |
 | **终诗** | 客愁随月满江流<br>梦入青冥见旧游<br>酒盏风前独对影<br>琴弦天外愈添愁<br>故园已隔云千叠<br>芳草空连雁一秋<br>今夕相逢宁太晚<br>为君歌彻送东州 | 孤云万里故园身<br>忍听边角咽江滨<br>千峰雪落征衣冷<br>一骑风回铁甲春<br>故垒苔深埋旧镞<br>荒城月白照归人<br>雁声断处烟如墨<br>犹有天山苜蓿新 | 风翻墨浪客衣单<br>霜凝石径暮烟寒<br>雁衔夕照千峰瘦<br>雨织灯痕一水残<br>孤棹摇波星欲堕<br>半窗移竹影初攒<br>归期暗数芦花雪<br>故国遥看月浸滩 |
-| **图** | ![](assets/report_images/20260630_205747/delta_0.14/04_客愁随月满江流_gen1_clip0.326.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/04_孤云万里故园身_gen1_clip0.331.jpg) | ![](assets/report_images/20260630_202046/delta_0.20/04_风翻墨浪客衣单_gen1_clip0.347.jpg) |
+| **图** | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_205747/delta_0.14/04_%E5%AE%A2%E6%84%81%E9%9A%8F%E6%9C%88%E6%BB%A1%E6%B1%9F%E6%B5%81_gen1_clip0.326.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_131315/delta_0.17/04_%E5%AD%A4%E4%BA%91%E4%B8%87%E9%87%8C%E6%95%85%E5%9B%AD%E8%BA%AB_gen1_clip0.331.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/04_%E9%A3%8E%E7%BF%BB%E5%A2%A8%E6%B5%AA%E5%AE%A2%E8%A1%A3%E5%8D%95_gen1_clip0.347.jpg) |
 
 ---
 
@@ -115,7 +115,7 @@
 | **攻擂** | 2/2 | 1/3 | 1/3 |
 | **诗名** | 夏夜蝉声 | 夏夜蝉鸣 | 夏蝉 |
 | **终诗** | 风高枝欲折<br>声咽夜偏长<br>露重蝉声涩<br>叶疏影自凉 | 午风清越报<br>三更断续休<br>谁听星月夜<br>独在碧槐头 | 初生蜕旧壳<br>声振绿阴稠<br>忽觉秋光近<br>清响落空流 |
-| **图** | ![](assets/report_images/20260630_205747/delta_0.14/05_风高枝欲折_gen3_clip0.289.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/05_午风清越报_gen1_clip0.308.jpg) | ![](assets/report_images/20260630_202046/delta_0.20/05_初生蜕旧壳_gen2_clip0.279.jpg) |
+| **图** | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_205747/delta_0.14/05_%E9%A3%8E%E9%AB%98%E6%9E%9D%E6%AC%B2%E6%8A%98_gen3_clip0.289.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_131315/delta_0.17/05_%E5%8D%88%E9%A3%8E%E6%B8%85%E8%B6%8A%E6%8A%A5_gen1_clip0.308.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/05_%E5%88%9D%E7%94%9F%E8%9C%95%E6%97%A7%E5%A3%B3_gen2_clip0.279.jpg) |
 
 ---
 
@@ -127,7 +127,7 @@
 | **攻擂** | 0/2 | 1/2 | 0/2 |
 | **诗名** | 田家春耕 | 春野炊烟 | 田家夜宿 |
 | **终诗** | 雨过田家日暖烘<br>新犁初放水波中<br>村头有客停农舍<br>唤起邻翁话岁丰 | 小桥仄仄酒旗斜<br>茅舍依山势自嵬<br>稚子牵牛归径晚<br>一痕炊影漾春杯 | 一村烟火一篱茅<br>山崦田家路转饶<br>有客夜寒留宿去<br>牧童敲笛向灯遥 |
-| **图** | ![](assets/report_images/20260630_205747/delta_0.14/06_雨过田家日暖烘_gen3_clip0.254.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/06_小桥仄仄酒旗斜_gen1_clip0.334.jpg) | ![](assets/report_images/20260630_202046/delta_0.20/06_一村烟火一篱茅_gen1_clip0.321.jpg) |
+| **图** | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_205747/delta_0.14/06_%E9%9B%A8%E8%BF%87%E7%94%B0%E5%AE%B6%E6%97%A5%E6%9A%96%E7%83%98_gen3_clip0.254.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_131315/delta_0.17/06_%E5%B0%8F%E6%A1%A5%E4%BB%84%E4%BB%84%E9%85%92%E6%97%97%E6%96%9C_gen1_clip0.334.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/06_%E4%B8%80%E6%9D%91%E7%83%9F%E7%81%AB%E4%B8%80%E7%AF%B1%E8%8C%85_gen1_clip0.321.jpg) |
 
 ---
 
@@ -139,7 +139,7 @@
 | **攻擂** | 2/2 | 2/2 | 2/2 |
 | **诗名** | 消夏 | 消夏即事 | 消夏山居 |
 | **终诗** | 暑深蝉韵细<br>风定日痕移<br>竹滴空庭冷<br>荷翻宿雨欹<br>云轻天影缓<br>鸟静晚光迟<br>心远尘机息<br>簟凉生夜飔 | 午梦初回久<br>清飔暗度来<br>云收炎晷薄<br>露裛素襟开<br>蝉坠空潭影<br>萤浮断岸苔<br>苍苔滋静霭<br>坐久忘尘埃 | 青筠摇影碎<br>素练泻空来<br>露冷松针重<br>烟轻石径开<br>泉声穿涧远<br>鹤唳入云回<br>野客携琴久<br>孤峰立暮苔 |
-| **图** | ![](assets/report_images/20260630_205747/delta_0.14/07_暑深蝉韵细_gen1_clip0.298.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/07_午梦初回久_gen1_clip0.290.jpg) | ![](assets/report_images/20260630_202046/delta_0.20/07_青筠摇影碎_gen2_clip0.312.jpg) |
+| **图** | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_205747/delta_0.14/07_%E6%9A%91%E6%B7%B1%E8%9D%89%E9%9F%B5%E7%BB%86_gen1_clip0.298.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_131315/delta_0.17/07_%E5%8D%88%E6%A2%A6%E5%88%9D%E5%9B%9E%E4%B9%85_gen1_clip0.290.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/07_%E9%9D%92%E7%AD%A0%E6%91%87%E5%BD%B1%E7%A2%8E_gen2_clip0.312.jpg) |
 
 ---
 
@@ -151,7 +151,7 @@
 | **攻擂** | 2/2 | 1/2 | 1/2 |
 | **诗名** | 危楼观山 | 青山深处 | 高楼远山 |
 | **终诗** | 欲上危楼接翠微<br>一襟霜气沁秋衣<br>檐牙风引千峰涌<br>槛外云移万壑飞<br>断雁横天声渐杳<br>斜阳熔野色犹辉<br>忽惊素魄穿帘入<br>清影漫铺尘梦稀 | 云开千嶂碧空斜<br>日涌金轮赤焰华<br>风送松涛声细细<br>雨润珠网气嘉嘉<br>溪边竹影摇青玉<br>石上苔痕印素纱<br>遥见一川新霁好<br>青山深处即吾家 | 楼前烟水接苍茫<br>楼上西风送客航<br>日暮云垂秋意薄<br>酒阑霜重客魂伤<br>波摇夕照千峰暗<br>叶落寒塘一雁翔<br>谁倚孤亭听雁过<br>故园菊影正初黄 |
-| **图** | ![](assets/report_images/20260630_205747/delta_0.14/08_欲上危楼接翠微_gen1_clip0.301.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/08_云开千嶂碧空斜_gen2_clip0.304.jpg) | ![](assets/report_images/20260630_202046/delta_0.20/08_楼前烟水接苍茫_gen1_clip0.345.jpg) |
+| **图** | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_205747/delta_0.14/08_%E6%AC%B2%E4%B8%8A%E5%8D%B1%E6%A5%BC%E6%8E%A5%E7%BF%A0%E5%BE%AE_gen1_clip0.301.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_131315/delta_0.17/08_%E4%BA%91%E5%BC%80%E5%8D%83%E5%B6%82%E7%A2%A7%E7%A9%BA%E6%96%9C_gen2_clip0.304.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/08_%E6%A5%BC%E5%89%8D%E7%83%9F%E6%B0%B4%E6%8E%A5%E8%8B%8D%E8%8C%AB_gen1_clip0.345.jpg) |
 
 ---
 
@@ -163,7 +163,7 @@
 | **攻擂** | 1/2 | 2/2 | 0/3 |
 | **诗名** | 孤馆秋鹤 | 客馆秋夜 | 客舍孤灯 |
 | **终诗** | 孤馆衔云近<br>松风扫榻迟<br>霜天闻唳鹤<br>空际正悲秋 | 客馆桐阴落<br>空庭雁字残<br>月移千嶂白<br>夜永杵声寒 | 客舍逢残岁<br>孤灯照病身<br>春愁如可惯<br>一岁又西人 |
-| **图** | ![](assets/report_images/20260630_205747/delta_0.14/09_孤馆衔云近_gen1_clip0.329.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/09_客馆桐阴落_gen1_clip0.292.jpg) | ![](assets/report_images/20260630_202046/delta_0.20/09_客舍逢残岁_gen3_clip0.288.jpg) |
+| **图** | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_205747/delta_0.14/09_%E5%AD%A4%E9%A6%86%E8%A1%94%E4%BA%91%E8%BF%91_gen1_clip0.329.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_131315/delta_0.17/09_%E5%AE%A2%E9%A6%86%E6%A1%90%E9%98%B4%E8%90%BD_gen1_clip0.292.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/09_%E5%AE%A2%E8%88%8D%E9%80%A2%E6%AE%8B%E5%B2%81_gen3_clip0.288.jpg) |
 
 ---
 
@@ -175,7 +175,7 @@
 | **攻擂** | 2/2 | 2/2 | 1/2 |
 | **诗名** | 春雨江钓 | 春雨霁 | 春雨吟 |
 | **终诗** | 江头春雨濯云屏<br>风飐垂杨绿欲停<br>偶倚沙痕听鹭语<br>一蓑烟水钓波青 | 雨霁风清正合宜<br>扫阶瀹茗自炊炊<br>洗开素魄凝霜骨<br>春色依然上柳枝 | 春风暗度花初绽<br>春雨轻扶柳半垂<br>小院风来人独坐<br>一帘烟色入吟诗 |
-| **图** | ![](assets/report_images/20260630_205747/delta_0.14/10_江头春雨濯云屏_gen1_clip0.322.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/10_雨霁风清正合宜_gen1_clip0.308.jpg) | ![](assets/report_images/20260630_202046/delta_0.20/10_春风暗度花初绽_gen1_clip0.327.jpg) |
+| **图** | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_205747/delta_0.14/10_%E6%B1%9F%E5%A4%B4%E6%98%A5%E9%9B%A8%E6%BF%AF%E4%BA%91%E5%B1%8F_gen1_clip0.322.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_131315/delta_0.17/10_%E9%9B%A8%E9%9C%81%E9%A3%8E%E6%B8%85%E6%AD%A3%E5%90%88%E5%AE%9C_gen1_clip0.308.jpg) | ![](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/10_%E6%98%A5%E9%A3%8E%E6%9A%97%E5%BA%A6%E8%8A%B1%E5%88%9D%E7%BB%BD_gen1_clip0.327.jpg) |
 
 
 ## §4 赏析（点评 by Claude Opus 4.7）
