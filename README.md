@@ -365,7 +365,7 @@ naked 模式仅传简短 user request，不带任何格式约束。微调的格�
 
 **方法论亮点：** 跨家族 4 评委集成（DeepSeek + Qwen + GLM + Moonshot）抗 self-bias · forward+reverse 双向 pairwise 暴露 position bias（摇摆率 23% 公开标注）· BWS 选 best 规避评分饱和 · 3 run mean ± std 区分信号 vs 噪声 · 评委解析失败显式弃权不污染 multi-judge 合成。
 
-**评估反哺生产：** eval 侧的 position-bias 方法论反过来审计了生产擂台——发现 judge 固定"擂主 A 位/挑战者 B 位"布局后做双向重判探针，复盘中识别出探针自身的选择-复现混杂并主动降级结论，最终落地 A/B 位随机化防御（[sweep 报告 §6.3](eval/REPORT_pairwise_win_delta_sweep_2026-06-30.md)）。
+**评估反哺生产：** eval 侧的 position-bias 方法论反过来审计了生产擂台——发现 judge 固定"擂主 A 位/挑战者 B 位"布局后做双向重判探针，复盘中识别出探针自身的选择-复现混杂并主动降级结论，最终落地 A/B 位随机化防御；后续两个无混杂探针给出方向相反的信号，恰好验证了"随机化不赌方向"的设计选择（严谨版：[sweep 报告 §6.3](eval/REPORT_pairwise_win_delta_sweep_2026-06-30.md) · 通俗版故事线：[METHODOLOGY §7.5](eval/METHODOLOGY.md)）。
 
 完整报告：`outputs/eval/eval_poem_<timestamp>.md` · 32 道分层 benchmark 见 [`eval/benchmark_themes.json`](eval/benchmark_themes.json)。
 
