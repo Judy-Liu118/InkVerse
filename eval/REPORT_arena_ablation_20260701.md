@@ -224,7 +224,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.316 | arm B · CLIP=0.311 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/01_老眼随风转_gen3_clip0.316.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/01_孤峰立暮寒_gen1_clip0.311.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/01_老眼随风转_gen3_clip0.316.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/01_孤峰立暮寒_gen1_clip0.311.jpg) |
 | 诗名：*秋夜疏桐寒蛩* | 诗名：*秋桐寒蛩* |
 | 老眼随风转<br>清秋独苦吟<br>松风惊落叶<br>山月照疏砧<br>夜雨添新恨<br>寒蛩替旧音<br>萧条归卧意<br>愁杀杜陵心 | 孤峰立暮寒<br>清响坠空残<br>桐凋风自静<br>雨歇气初干<br>雁沉青嶂尽<br>蛩咽素光阑<br>此境无声极<br>萧然坐欲看 |
 | VLM: 桐树✓ · 蛩✗ (1/2) | VLM: 桐树✓ · 蛩✓ (2/2) |
@@ -239,7 +239,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.296 | arm B · CLIP=0.280 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/02_清愁日永晚苍凉_gen4_clip0.296.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/02_老去萧然无一事_gen4_clip0.280.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/02_清愁日永晚苍凉_gen4_clip0.296.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/02_老去萧然无一事_gen4_clip0.280.jpg) |
 | 诗名：*悲秋吟* | 诗名：*悲秋感怀* |
 | 清愁日永晚苍凉<br>衰鬓如丝又转伤<br>风动露华侵客簟<br>雨连霜气逼池塘<br>孤云远入南峰外<br>落叶翻随一径旁<br>欲向西风吹梦去<br>空吟落雁数声长 | 老去萧然无一事<br>此身空自叹浮萍<br>清霜昨夜飞无数<br>白露今朝洗尽青<br>已觉寒风摧鬓发<br>却思明月照床扃<br>一樽聊复倾新酒<br>未觉飘零亦怆情 |
 | VLM: 悲秋场景✓ (1/1) | VLM: 悲秋场景✓ (1/1) |
@@ -254,7 +254,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.336 | arm B · CLIP=0.325 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/03_寒风摇落尽_gen1_clip0.336.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/03_玉骨冰姿远_gen1_clip0.325.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/03_寒风摇落尽_gen1_clip0.336.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/03_玉骨冰姿远_gen1_clip0.325.jpg) |
 | 诗名：*寒梅* | 诗名：*寒梅咏* |
 | 寒风摇落尽<br>独有玉花残<br>惟有香如故<br>春来不待兰 | 玉骨冰姿远<br>孤根傲雪霜<br>岁寒方见节<br>不待百花芳 |
 | VLM: 梅花✓ (1/1) | VLM: 梅花✓ (1/1) |
@@ -269,7 +269,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.317 | arm B · CLIP=0.341 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/04_夜月生云冻一江_gen3_clip0.317.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/04_孤松独立千峰肃_gen1_clip0.341.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/04_夜月生云冻一江_gen3_clip0.317.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/04_孤松独立千峰肃_gen1_clip0.341.jpg) |
 | 诗名：*飞雪寒江* | 诗名：*雪岭寒鸦* |
 | 夜月生云冻一江<br>朔风飞雪打平沙<br>谁将此意为谁遣<br>唤起南楼看万家 | 孤松独立千峰肃<br>霜骨棱棱势自遒<br>雪压虬枝犹抱月<br>寒鸦忽掠一痕秋 |
 | VLM: 雪✓ · 寒鸦✗ (1/2) | VLM: 雪✓ · 寒鸦✓ (2/2) |
@@ -284,7 +284,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.308 | arm B · CLIP=0.273 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/05_霜气已凄然_gen2_clip0.308.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/05_孤灯摇素壁_gen3_clip0.273.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/05_霜气已凄然_gen2_clip0.308.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/05_孤灯摇素壁_gen3_clip0.273.jpg) |
 | 诗名：*雪夜孤吟* | 诗名：*雪夜客思* |
 | 霜气已凄然<br>寒声转寂然<br>山深人迹绝<br>水远客船眠<br>老屋残灯灭<br>空窗密雪圆<br>孤吟谁与和<br>一曲苦边弦 | 孤灯摇素壁<br>寒漏滴空庭<br>客梦霜风碎<br>空帷竹影青<br>峰峦吞夜黑<br>云气压窗冥<br>莫道归程远<br>更深月自停 |
 | VLM: 雪夜场景✓ (1/1) | VLM: 雪夜场景✓ (1/1) |
@@ -299,7 +299,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=**0.362**（全 sweep 最高）· 硬约束 **0/2** | arm B · CLIP=0.290 · 硬约束 **1/2** |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/06_寒窗半掩卷披疏_gen1_clip0.362.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/06_炉火凝烟夜未央_gen4_clip0.290.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/06_寒窗半掩卷披疏_gen1_clip0.362.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/06_炉火凝烟夜未央_gen4_clip0.290.jpg) |
 | 诗名：*寒窗夜坐* | 诗名：*冬夜炉火* |
 | 寒窗半掩卷披疏<br>坐久风前日欲晡<br>一榻烟芜闲似睡<br>两炉炉炭冷犹苏<br>霜浓木叶无纤缕<br>雪满梅花有几株<br>此兴自怜人已晚<br>更添愁思忆吾庐 | 炉火凝烟夜未央<br>竹窗风雪叩寒霜<br>邻家酒旆因风寂<br>老伴茶瓯带影香<br>独坐忽惊更漏永<br>暗移半榻月痕凉<br>何人共我倾松露<br>莫待新桃换旧妆 |
 | VLM: 炉火✗ · 寒灯✗ (0/2) | VLM: 炉火✓ · 寒灯✗ (1/2) |
@@ -314,7 +314,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.305 | arm B · CLIP=0.308 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/07_溪水自东西_gen3_clip0.305.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/07_微飔穿竹径_gen2_clip0.308.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/07_溪水自东西_gen3_clip0.305.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/07_微飔穿竹径_gen2_clip0.308.jpg) |
 | 诗名：*溪声* | 诗名：*溪声* |
 | 溪水自东西<br>山花来去同<br>溪声无定在<br>何处更相逢 | 微飔穿竹径<br>清响落云间<br>松影摇溪浅<br>苔痕浸水闲 |
 | VLM: 溪水✓ (1/1) | VLM: 溪水✓ (1/1) |
@@ -329,7 +329,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.307 · 硬约束 2/2 | arm B · CLIP=0.303 · 硬约束 2/2 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/08_登临览罢欲凭栏_gen2_clip0.307.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/08_登楼高眺碧云天_gen1_clip0.303.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/08_登临览罢欲凭栏_gen2_clip0.307.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/08_登楼高眺碧云天_gen1_clip0.303.jpg) |
 | 诗名：*登楼望远* | 诗名：*登楼远眺* |
 | 登临览罢欲凭栏<br>一气周流万象宽<br>万里阴云开大漠<br>千峰雪岭照沧澜<br>孤城古堞人归后<br>高塔秋楼月向残<br>回首故园无此景<br>烟霞无限在云端 | 登楼高眺碧云天<br>日暖风清鸟乱旋<br>远水归帆春草绿<br>孤城衔暮晚钟悬<br>江流岂必随人意<br>云去原无系物牵<br>莫恨此身羁旅久<br>年华未老可回鞭 |
 | VLM: 高楼✓ · 远山✓ (2/2) | VLM: 高楼✓ · 远山✓ (2/2) |
@@ -344,7 +344,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.327 · 硬约束 **0/2** | arm B · CLIP=0.322 · 硬约束 **2/2** |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/09_晓来一壑静无音_gen1_clip0.327.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/09_村路风清雨过稀_gen3_clip0.322.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/09_晓来一壑静无音_gen1_clip0.327.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/09_村路风清雨过稀_gen3_clip0.322.jpg) |
 | 诗名：*耕烟暮色* | 诗名：*春村耕趣* |
 | 晓来一壑静无音<br>半壁青山对远林<br>野店竹篱茅舍里<br>暮年犹得伴耕深 | 村路风清雨过稀<br>春来无事亦忘机<br>耕牛未肯还田去<br>犹把新泥护柳枝 |
 | VLM: 耕牛✗ · 炊烟✗ (0/2) | VLM: 耕牛✓ · 炊烟✓ (2/2) |
@@ -359,7 +359,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.322 | arm B · CLIP=0.325 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/10_老去厌尘嚣_gen1_clip0.322.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/10_昔年辞禄去_gen1_clip0.325.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/10_老去厌尘嚣_gen1_clip0.322.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/10_昔年辞禄去_gen1_clip0.325.jpg) |
 | 诗名：*归隐幽居* | 诗名：*归隐青山* |
 | 老去厌尘嚣<br>归来得自由<br>松篁连古寺<br>风月到茅丘<br>客少人稀坐<br>云深树独游<br>欲知幽胜处<br>石径曲通幽 | 昔年辞禄去<br>此日得闲身<br>云外千峰静<br>林间一径新<br>茶烟浮石榻<br>松影落衣巾<br>莫道归来晚<br>青山正待人 |
 | VLM: 归隐场景✗ (0/1) | VLM: 归隐场景✗ (0/1) |
@@ -374,7 +374,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.331 | arm B · CLIP=0.276 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/11_月色照营帐_gen1_clip0.331.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/11_秋风卷地寒_gen4_clip0.276.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/11_月色照营帐_gen1_clip0.331.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/11_秋风卷地寒_gen4_clip0.276.jpg) |
 | 诗名：*戍楼角声* | 诗名：*戍楼角声* |
 | 月色照营帐<br>星稀见戍楼<br>马毛风上耸<br>兵刃月中流<br>独树秋萧索<br>孤村夜斗筹<br>平生未有报<br>空自卧金钩 | 秋风卷地寒<br>客泪沾衣难<br>独倚戍楼角<br>平明旆影残<br>荒城埋白骨<br>老将拭霜鞍<br>功成何日返<br>归卧旧篱看 |
 | VLM: 戍楼✓ · 边塞角声场景✓ (2/2) | VLM: 戍楼✓ · 边塞角声场景✓ (2/2) |
@@ -389,7 +389,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.317 | arm B · CLIP=0.321 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/12_万里风霜一雁行_gen1_clip0.317.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/12_山衔落日孤城闭_gen1_clip0.321.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/12_万里风霜一雁行_gen1_clip0.317.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/12_山衔落日孤城闭_gen1_clip0.321.jpg) |
 | 诗名：*边城征戍* | 诗名：*征戍吟* |
 | 万里风霜一雁行<br>边城春尽尚馿兵<br>故园回首烟云合<br>独卧南楼月色清 | 山衔落日孤城闭<br>万里风霜一雁沉<br>铁甲凝寒犹望北<br>半蓑烟雨自成霖 |
 | VLM: 征戍场景✗ (0/1) | VLM: 征戍场景✓ (1/1) |
@@ -404,7 +404,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.255 | arm B · CLIP=0.342 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/13_雨歇山城晓_gen3_clip0.255.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/13_客舍孤灯夜_gen2_clip0.342.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/13_雨歇山城晓_gen3_clip0.255.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/13_客舍孤灯夜_gen2_clip0.342.jpg) |
 | 诗名：*客舍孤灯* | 诗名：*客舍孤灯* |
 | 雨歇山城晓<br>风来叶满庭<br>不知愁夜半<br>独宿客家灯 | 客舍孤灯夜<br>江云入梦来<br>月华清似水<br>风度淡如梅 |
 | VLM: 客舍✗ · 孤灯✓ (1/2) | VLM: 客舍✓ · 孤灯✓ (2/2) |
@@ -419,7 +419,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.301 | arm B · CLIP=0.292 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/14_风雪关河又一年_gen3_clip0.301.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/14_风回曲径香成阵_gen3_clip0.292.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/14_风雪关河又一年_gen3_clip0.301.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/14_风回曲径香成阵_gen3_clip0.292.jpg) |
 | 诗名：*客愁* | 诗名：*客愁* |
 | 风雪关河又一年<br>故人南浦隔重烟<br>秋怀似我心相似<br>乡思如君眼不偏<br>旅况不堪愁独处<br>岁寒空自苦萧然<br>何时把酒同为乐<br>共话江头落照边 | 风回曲径香成阵<br>云敛遥峰影入楼<br>蝶魂乍醒春事老<br>莺语犹怜故园秋<br>酒暖偏惊罗袖薄<br>花飞漫数玉钗柔<br>西窗烛冷人何在<br>欲说还休泪自收 |
 | VLM: 羁旅愁思场景✗ (0/1) | VLM: 羁旅愁思场景✓ (1/1) |
@@ -434,7 +434,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.281 | arm B · CLIP=0.308 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/15_江城秋色近黄昏_gen4_clip0.281.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/15_忽拂征衣理旧弦_gen1_clip0.308.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/15_江城秋色近黄昏_gen4_clip0.281.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/15_忽拂征衣理旧弦_gen1_clip0.308.jpg) |
 | 诗名：*江城送别* | 诗名：*阳关送别* |
 | 江城秋色近黄昏<br>日暮归心正断魂<br>欲识别离无处所<br>更须相送过前村 | 忽拂征衣理旧弦<br>阳关声断暮云连<br>孤峰渐没归鸿影<br>一缕青痕落远天 |
 | VLM: 送别场景✓ (1/1) | VLM: 送别场景✗ (0/1) |
@@ -449,7 +449,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.322 | arm B · CLIP=0.324 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/16_江头酒力已微醺_gen1_clip0.322.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/16_霜凝古道暮云寒_gen1_clip0.324.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/16_江头酒力已微醺_gen1_clip0.322.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/16_霜凝古道暮云寒_gen1_clip0.324.jpg) |
 | 诗名：*离亭折柳* | 诗名：*长亭折柳* |
 | 江头酒力已微醺<br>一别相逢几许春<br>风递梅花知远近<br>水含明月见相亲<br>青门路断无多雨<br>白发人归少有尘<br>欲向离亭折杨柳<br>可怜无力更伤神 | 霜凝古道暮云寒<br>客路迢迢未抵安<br>孤馆一灯摇影瘦<br>空山万木带烟残<br>归心已逐南飞雁<br>别泪犹沾北去鞍<br>行尽关河肠欲断<br>长亭折柳月将阑 |
 | VLM: 长亭✓ · 柳枝✓ (2/2) | VLM: 长亭✓ · 柳枝✓ (2/2) |
@@ -464,7 +464,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.289 | arm B · CLIP=0.307 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/17_西陵城已坏_gen3_clip0.289.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/17_故园苔径冷_gen1_clip0.307.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/17_西陵城已坏_gen3_clip0.289.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/17_故园苔径冷_gen1_clip0.307.jpg) |
 | 诗名：*西陵怀古* | 诗名：*古城荒台* |
 | 西陵城已坏<br>南浦水应深<br>草色侵人骨<br>沙痕入马心<br>夕阳空野戍<br>秋雨动寒砧<br>谁识当年事<br>荒台月满林 | 故园苔径冷<br>废堞雁声斜<br>暮霭吞孤垒<br>秋风扫落霞<br>荣枯皆过眼<br>兴废本无嗟<br>唯见青磷起<br>寒磷照旧沙 |
 | VLM: 古城✓ · 荒台✓ (2/2) | VLM: 古城✓ · 荒台✗ (1/2) |
@@ -479,7 +479,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.313 | arm B · CLIP=0.289 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/18_南朝一郡有王城_gen2_clip0.313.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/18_曾闻铁甲裂霜天_gen3_clip0.289.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/18_南朝一郡有王城_gen2_clip0.313.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/18_曾闻铁甲裂霜天_gen3_clip0.289.jpg) |
 | 诗名：*吊南朝王城* | 诗名：*吊古* |
 | 南朝一郡有王城<br>风物如今忆昔荣<br>江树半春留客醉<br>淮田秋雨断人声<br>山连故垒孤村暮<br>花落空楼远水生<br>回首故园非旧国<br>西来何日再吹筝 | 曾闻铁甲裂霜天<br>兴废浮沉剑自悬<br>关塞云崩龙气在<br>河山血淬骨锋坚<br>残垣暗蚀苔痕篆<br>断镞犹衔夜月寒<br>登楼忽觉星垂野<br>万古长风扫旧鞍 |
 | VLM: 吊古场景✗ (0/1) | VLM: 吊古场景✓ (1/1) |
@@ -494,7 +494,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.297 | arm B · CLIP=0.303 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/19_今夜清光满_gen4_clip0.297.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/19_秋宵清似水_gen1_clip0.303.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/19_今夜清光满_gen4_clip0.297.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/19_秋宵清似水_gen1_clip0.303.jpg) |
 | 诗名：*中秋望月* | 诗名：*中秋望月* |
 | 今夜清光满<br>中秋未到时<br>月圆人不圆<br>独坐对孤影 | 秋宵清似水<br>素魄出东楼<br>盈时当举盏<br>未醉不封侯 |
 | VLM: 明月✓ · 团圆场景✗ (1/2) | VLM: 明月✓ · 团圆场景✗ (1/2) |
@@ -509,7 +509,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.287 | arm B · CLIP=0.290 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/20_风月今重九_gen3_clip0.287.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/20_重阳临野阔_gen3_clip0.290.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/20_风月今重九_gen3_clip0.287.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/20_重阳临野阔_gen3_clip0.290.jpg) |
 | 诗名：*重阳登高* | 诗名：*重阳登高* |
 | 风月今重九<br>登高望未休<br>秋山空翠湿<br>菊酒满金秋<br>雁过人将散<br>萸残客暂留<br>东篱何限醉<br>聊此慰衰愁 | 重阳临野阔<br>登高意自真<br>篱疏霜色浅<br>山远雁声频<br>云破千峰出<br>风回一径匀<br>天垂沧海阔<br>菊映素秋新 |
 | VLM: 重阳场景✓ (1/1) | VLM: 重阳场景✓ (1/1) |
@@ -524,7 +524,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.332 · 硬约束 **2/2** | arm B · CLIP=0.335 · 硬约束 **0/2** |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/21_古刹钟声夜未休_gen1_clip0.332.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/21_雨收山色洗尘新_gen1_clip0.335.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/21_古刹钟声夜未休_gen1_clip0.332.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/21_雨收山色洗尘新_gen1_clip0.335.jpg) |
 | 诗名：*古刹钟声* | 诗名：*古刹钟云* |
 | 古刹钟声夜未休<br>松间野鹤伴云游<br>人间岁月如流水<br>更向何时得少留 | 雨收山色洗尘新<br>石径苔深印屐茵<br>钟曳流云千嶂散<br>松筛碎日一襟春 |
 | VLM: 古刹✓ · 钟鼓✓ (2/2) | VLM: 古刹✗ · 钟鼓✗ (0/2) |
@@ -539,7 +539,7 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 | arm A · CLIP=0.275 | arm B · CLIP=0.292 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_085340/delta_0.17/22_有身如梦者_gen3_clip0.275.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260702_094058/delta_0.17/22_一瓣随风远_gen3_clip0.292.png) |
+| ![](assets/report_images/20260702_085340/delta_0.17/22_有身如梦者_gen3_clip0.275.jpg) | ![](assets/report_images/20260702_094058/delta_0.17/22_一瓣随风远_gen3_clip0.292.jpg) |
 | 诗名：*无常偈* | 诗名：*无常* |
 | 有身如梦者<br>无我更无时<br>何处觅真子<br>空门见自知 | 一瓣随风远<br>深林暗度香<br>欲追云外影<br>何必问苍茫 |
 | VLM: 无常主题场景✗ (0/1) | VLM: 无常主题场景✓ (1/1) |
@@ -560,7 +560,7 @@ _保留 preliminary 阶段（2026-07-01）的双图对比。10 主题全部数�
 
 | arm A · CLIP=0.293 | arm B · CLIP=0.326 |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260701_223349/delta_0.17/01_燕蹴花阴下_gen4_clip0.293.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260630_131315/delta_0.17/01_风暖莺梭柳_gen1_clip0.326.png) |
+| ![](assets/report_images/20260701_223349/delta_0.17/01_燕蹴花阴下_gen4_clip0.293.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/01_风暖莺梭柳_gen1_clip0.326.jpg) |
 | 诗名：*柳燕春思* | 诗名：*莺舞春光* |
 | 燕蹴花阴下<br>莺啼柳翠低<br>日长人独立<br>春事已阑珊 | 风暖莺梭柳<br>春浓燕剪泥<br>花繁蜂远岫<br>水阔鸭平堤 |
 | VLM: 柳树✓ · 燕子✓ (2/2) | VLM: 柳树✓ · 燕子✓ (2/2) |
@@ -575,7 +575,7 @@ _保留 preliminary 阶段（2026-07-01）的双图对比。10 主题全部数�
 
 | arm A · CLIP=0.281 · 硬约束 **1/1** | arm B · CLIP=0.308 · 硬约束 **0/1** |
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260701_223349/delta_0.17/05_炎蒸暑雨尽_gen4_clip0.281.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260630_131315/delta_0.17/05_午风清越报_gen1_clip0.308.png) |
+| ![](assets/report_images/20260701_223349/delta_0.17/05_炎蒸暑雨尽_gen4_clip0.281.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/05_午风清越报_gen1_clip0.308.jpg) |
 | 炎蒸暑雨尽<br>高柳一惊蝉<br>未省为谁碎<br>唯闻不断喧 | 午风清越报<br>高柳一凉阴<br>谁遣林间夜<br>唯闻碧海头 |
 | VLM: 蝉✓ (1/1) | VLM: 蝉✗ (0/1) |
 
@@ -589,7 +589,7 @@ _保留 preliminary 阶段（2026-07-01）的双图对比。10 主题全部数�
 
 | arm A · CLIP=0.329 · 硬约束 **2/2** | arm B · CLIP=0.304 · 硬约束 **1/2**（高楼 miss）|
 |---|---|
-| ![](../outputs/eval/sweep_pairwise_win_delta_images_20260701_223349/delta_0.17/08_楼阁临江面渺茫_gen1_clip0.329.png) | ![](../outputs/eval/sweep_pairwise_win_delta_images_20260630_131315/delta_0.17/08_云开千嶂碧空斜_gen2_clip0.304.png) |
+| ![](assets/report_images/20260701_223349/delta_0.17/08_楼阁临江面渺茫_gen1_clip0.329.jpg) | ![](assets/report_images/20260630_131315/delta_0.17/08_云开千嶂碧空斜_gen2_clip0.304.jpg) |
 | 楼阁临江面渺茫<br>凭高徙倚意苍苍<br>水天一色寒光暮<br>山北青青柳絮长<br>春事已备行客游<br>春波不入无余化 | 云开千嶂碧空斜<br>又涌何堪长滿华<br>春草春光何细细<br>春事春光何季间<br>溪梅书影摇初露<br>石壁苔文印玉纱 |
 | VLM: 高楼✓ · 远山✓ (2/2) | VLM: 高楼✗ · 远山✓ (1/2) |
 
