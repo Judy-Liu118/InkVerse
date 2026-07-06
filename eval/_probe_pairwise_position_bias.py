@@ -27,6 +27,10 @@ temp=0.1 下重判 forward 高度复现原判（首跑 46/53 仍=B），因此�
 本探针的产出只能定位为"位置效应迹象"。无偏确认需改用与 judge 选择无关的
 新鲜对局（B1b：如 armA vs armB 终诗配对，双向判定），或 B2 全新擂台重跑。
 
+【结局】B1b 已执行（2026-07-06，`_probe_position_bias_fresh_pairs.py`）：
+新鲜配对 32 对上 position_A_follow 7 : position_B_follow 0（p=0.0156），
+真实位置偏置**偏 A 位**——本探针表面的"偏 B 位"确系选择-复现伪效应。
+
 API 消耗：len(pairs) × 2 次 qwen-plus chat（本仓库三份 JSON 共 53 对 → 106 次）。
 不消耗任何图像配额。
 """
