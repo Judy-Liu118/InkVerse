@@ -25,4 +25,14 @@ jobs:
           pip install pytest gradio openai pypinyin pingshui-rhyme requests Pillow pyyaml python-dotenv
 
       - name: Run tests
-        run: pytest tests -q
+        run: |
+          set -o pipefail
+          pytest tests -q 2>&1 | tee pytest_out.txt
+
+      # 失败时把 pytest 摘要提升为 annotation（Actions 页面顶部直接可见，
+      # 也可经公开 check-runs annotations API 读取，无需下载完整日志）
+      - name: Surface failures as annotations
+        if: failure()
+        run: |
+          { grep -E "^(FAILED|ERROR)" pytest_out.txt || true; tail -8 pytest_out.txt; } \
+            | while IFS= read -r line; do echo "::error::${line}"; done
