@@ -12,31 +12,46 @@
 
 以下三组均为评估 run 的真实产物（擂台进化终稿 + CLIP 择优终图），未经人工挑改字句：
 
-| 「写一首春景的五言绝句，<br>要有柳树和燕子」 | 「写一首田园的七言绝句，<br>要有耕牛和炊烟」 | 「写一首七言律诗，<br>主题是客愁」 |
+| 「写一首羁旅的五言绝句，<br>要有客舍和孤灯」 | 「写一首田园的七言绝句，<br>要有耕牛和炊烟」 | 「写一首七言律诗，<br>主题是客愁」 |
 |---|---|---|
-| ![春柳燕烟](eval/assets/report_images/20260630_131315/delta_0.17/01_风暖莺梭柳_gen1_clip0.326.jpg) | ![春野炊烟](eval/assets/report_images/20260630_131315/delta_0.17/06_小桥仄仄酒旗斜_gen1_clip0.334.jpg) | ![客愁](eval/assets/report_images/20260630_202046/delta_0.20/04_风翻墨浪客衣单_gen1_clip0.347.jpg) |
-| **《春柳燕烟》**<br>风暖莺梭柳<br>云轻燕剪烟<br>花飞分远近<br>水自向东流 | **《春野炊烟》**<br>小桥仄仄酒旗斜<br>茅舍依山势自嵬<br>稚子牵牛归径晚<br>一痕炊影漾春杯 | **《客愁》**<br>风翻墨浪客衣单<br>霜凝石径暮烟寒<br>雁衔夕照千峰瘦<br>雨织灯痕一水残<br>孤棹摇波星欲堕<br>半窗移竹影初攒<br>归期暗数芦花雪<br>故国遥看月浸滩 |
+| ![客舍孤灯](eval/assets/report_images/20260702_094058/delta_0.17/13_客舍孤灯夜_gen2_clip0.342.jpg) | ![春野炊烟](eval/assets/report_images/20260630_131315/delta_0.17/06_小桥仄仄酒旗斜_gen1_clip0.334.jpg) | ![客愁](eval/assets/report_images/20260630_202046/delta_0.20/04_风翻墨浪客衣单_gen1_clip0.347.jpg) |
+| **《客舍孤灯》**<br>客舍孤灯夜<br>江云入梦来<br>月华清似水<br>风度淡如梅 | **《春野炊烟》**<br>小桥仄仄酒旗斜<br>茅舍依山势自嵬<br>稚子牵牛归径晚<br>一痕炊影漾春杯 | **《客愁》**<br>风翻墨浪客衣单<br>霜凝石径暮烟寒<br>雁衔夕照千峰瘦<br>雨织灯痕一水残<br>孤棹摇波星欲堕<br>半窗移竹影初攒<br>归期暗数芦花雪<br>故国遥看月浸滩 |
 
-左、中两例是 rich 题（用户点名的意象——柳/燕、耕牛/炊烟——须在诗与画中同时兑现），右例是 sparse 抽象主题。更多逐题三方对比见 [sweep 报告](eval/REPORT_pairwise_win_delta_sweep_2026-06-30.md) §3、擂台有无的双图并排见[消融报告](eval/REPORT_arena_ablation_20260701.md) §4.1。
+左、中两例是 rich 题（用户点名的意象——客舍/孤灯、耕牛/炊烟——须在诗与画中同时兑现，左例经 VLM 硬约束核查 2/2 命中），右例是 sparse 抽象主题。更多逐题三方对比见 [sweep 报告](eval/REPORT_pairwise_win_delta_sweep_2026-06-30.md) §3、擂台有无的双图并排见[消融报告](eval/REPORT_arena_ablation_20260701.md) §4.1。
 
 ## 流程
 
 ```mermaid
 flowchart TD
-    A[用户要求] --> B[任务规划]
-    B --> C[Arena 海选]
-    C --> D{合格 ≥ 3?}
-    D -->|否| C
-    D -->|是| E[守擂进化]
-    E --> F[关键词提取]
-    F --> G[诗名生成]
-    G --> H[提示词生成]
-    H --> I[图像生成]
-    I --> J[CLIP 评分]
-    J --> K{达标?}
-    K -->|否| L[改图循环]
-    L --> J
-    K -->|是| M[输出报告]
+    A(["用户一句话要求"]) --> B["任务规划<br>体裁 · 意象 · 风格解析"]
+
+    subgraph P ["诗 —— 本地 LoRA + 两级擂台"]
+        C["Arena 海选<br>LoRA 生成 5 首候选"] --> D["硬门控<br>押韵 · 平仄 · 堆砌词 · 重复"]
+        D --> E{"合格 ≥ 3 首?"}
+        E -- "否 · 重新生成 ≤3 轮" --> C
+        E -- "是" --> F["本地五维评分 + 切题评估<br>Top3 轮循 pairwise → 冠军"]
+        F --> G["守擂进化 ×2 轮<br>每轮 2 挑战者 1v1 对决<br>A/B 位随机化判定"]
+    end
+    B --> C
+
+    subgraph I ["画 —— 生图 + CLIP 门控"]
+        H["关键词提取 → 诗名<br>→ 英文提示词 + 自检"] --> J["文生图<br>Z-Image Turbo / 百炼 API"]
+        J --> K["CLIP 双锚点评分<br>诗-图 0.6 + 提示词-图 0.4"]
+        K --> L{"CLIP raw ≥ 0.30?"}
+        L -- "否 · ≤2 轮 · 自适应停止" --> M["改图循环<br>从历史最优图出发 · 编辑强度衰减"]
+        M --> K
+    end
+    G --> H
+    L -- "是 / 预算耗尽返回历史最优" --> Z(["成品：诗 + 画 + 创作报告"])
+
+    classDef poem fill:#e9f3ec,stroke:#41805e,color:#173324
+    classDef img  fill:#e9eef8,stroke:#4a63a8,color:#16213f
+    classDef gate fill:#fbf1dd,stroke:#c2913a,color:#43350f
+    classDef ends fill:#f7e9e9,stroke:#a25454,color:#3c1c1c
+    class B,C,D,F,G poem
+    class H,J,K,M img
+    class E,L gate
+    class A,Z ends
 ```
 
 ### Arena 海选

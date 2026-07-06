@@ -214,6 +214,8 @@ python -m eval.vlm_hard_constraint --agg outputs/eval/_agg_arena_ablation_main_n
 
 ## §4.1 主池 22 主题双图并排（n=22 · backend 04-22）
 
+> ℹ️ 本节及以下含 50 张图。GitHub 在线预览一次性加载大量图片时，raw 端点限流可能造成**零星随机裂图**（每次刷新失败的是不同几张）——刷新页面即恢复，本地 clone 查看无此问题。图片资产全部入库于 `eval/assets/report_images/`。
+
 每主题展示：arm A 终图 + arm A 诗 + arm B 终图 + arm B 诗 + CLIP + VLM 硬约束判定。图路径基于本报告在 `eval/` 目录（`../outputs/...`）。
 
 ---

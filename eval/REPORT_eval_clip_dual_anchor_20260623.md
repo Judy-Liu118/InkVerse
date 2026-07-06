@@ -164,19 +164,24 @@ n=15 千古名诗 `keyword_word_count` 分布：
 
 抽 3 张图暴露 dual anchor 设计的 signal 与盲区：
 
+| 7.1 江雪 · dual 与 VLM 同向 | 7.2 使至塞上 · CLIP 维度盲区 | 7.3 九月九日 · single-shot 局限 |
+|---|---|---|
+| ![江雪](assets/report_images/clip_classics_20260623/江雪_dual033_vlm095.jpg) | ![使至塞上](assets/report_images/clip_classics_20260623/使至塞上_dual028_vlm085.jpg) | ![九月九日](assets/report_images/clip_classics_20260623/九月九日_dual029_vlm065.jpg) |
+| VLM 0.95 · dual 0.33 | VLM 0.85 · dual **0.28** | VLM **0.65** · dual 0.29 |
+
 ### 7.1 江雪（VLM 0.95 · dual 0.33）—— dual 与 VLM 同向
 
 柳宗元《江雪》图：渔翁孤舟 + 雪江远山。VLM 极高分（0.95）、dual 也是全 15 首最高之一（0.33）。**当图片语义命中充分时，dual CLIP 与 VLM 判断一致**。
 
 ### 7.2 使至塞上（VLM 0.85 · dual 0.28）—— CLIP 维度盲区
 
-王维《使至塞上》图：单车 ✓ + 孤烟 ✓ + 长河 ✓ + 落日 ✓（4 anchor 全命中）。但 dual **仅 0.28**，比其他高 VLM 图（江雪 0.33 / 瀑布 0.32）偏低。
+王维《使至塞上》图：单车 ✓ + 孤烟 ✓ + 长河 ✓ + 落日 ✓（4 anchor 全命中，见上图中列——垂直烟柱正是"大漠孤烟直"）。但 dual **仅 0.28**，比其他高 VLM 图（江雪 0.33 / 瀑布 0.32）偏低。
 
 > **CLIP 不识"孤烟直"的诗意，只识表面色彩饱和度；VLM 才识古典意象命中度**。这是 dual anchor 设计的**内在天花板**——CLIP encoder 语义分辨力有限，不是 α 权重能修的。
 
 ### 7.3 九月九日忆山东兄弟（VLM 0.65 · dual 0.29）—— single-shot 局限
 
-王维《九月九日》图：仅一支带果枝条，缺"兄弟登高插茱萸"里的所有人物/动作元素。**VLM 判 0.65（低）、dual 判 0.29（普通）**——两个都识别出了"这张图不太合适"，但**具体是"缺什么"的诊断力不同**（VLM 能说出缺人物，dual 只是个分数）。
+王维《九月九日》图：仅一支带果枝条（上图右列），缺"兄弟登高插茱萸"里的所有人物/动作元素。**VLM 判 0.65（低）、dual 判 0.29（普通）**——两个都识别出了"这张图不太合适"，但**具体是"缺什么"的诊断力不同**（VLM 能说出缺人物，dual 只是个分数）。
 
 > **single-shot 一次生图对人物/动作题材命中率 0/5**（`REPORT_classics_15.md` §4 A finding）。这**不**是 backend 上限——refine loop / 多 seed / human-in-loop 未启用。
 
