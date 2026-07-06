@@ -25,6 +25,12 @@ B1b 修正设计：改用**与 judge 选择无关的新鲜配对**——两首�
 
 注意：X/Y 的内容差异（如 armB 经过擂台进化）只影响 content_* 的分布，
 不影响 position_* 两类的对称性——位置检验对内容不平衡不敏感。
+
+【后记 2026-07-06】本探针结果为 A_follow 7 : B_follow 0（p=0.0156，偏 A 位）。
+同日 B2-lite 位置审计（`_rerun_arena_randomized_layout.py`，生产擂主-挑战者对
+73 次随机分位判定）给出**反向弱信号**（挑战者 B 位 61.8% vs A 位 43.6%，
+p=0.16）——位置效应方向跨配对分布未锁死，引用本探针结论时须连同该张力，
+见 sweep 报告 §6.3 #1。
 """
 from __future__ import annotations
 
