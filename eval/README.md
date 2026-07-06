@@ -1,6 +1,7 @@
 # eval/ —— 离线评估脚本
 
-四个独立可跑的评估，分别验证项目里最值得写进简历的四个设计点。
+四个主评估（下表）验证项目最核心的设计点；此外还有一组分析/探针脚本（`_` 前缀，
+见"辅助工具与探针"节），承载显著性分析与 position-bias 审计的完整故事线。
 
 > ⚠ 这些脚本会真实调用 API、生图、跑 CLIP，**会烧钱、占显存、花时间**。
 > 推荐初次用小 `--n`（如 4）冒烟，确认输出正常后再扩到 32。
@@ -14,7 +15,7 @@
 | `eval_refine.py` | 自动方向性诗评 + refine_poem 的提升幅度 | 10 | 5–10 min |
 | `eval_autonomous.py` | 全自主模式相对单轮模式的 CLIP 终值提升 | 5 | 15–30 min |
 
-辅助工具：
+辅助工具与探针：
 - `analyze_clip_dual.py` —— 对 eval_clip JSON 做 dual 锚点合理性分析（α grid search + 锚点互补性）
 - `analyze_judge_pingze_sensitivity.py` —— 对 eval_poem JSON 做 F3 retrospective 分析（按 pingze 差分桶 + controlled pair + winner 切片）
 - `build_classics_benchmark.py` —— 构造 15 首唐诗名作 benchmark 供 eval_clip 复用
@@ -22,6 +23,13 @@
 - `sweep_pairwise_win_delta.py` —— **PAIRWISE_WIN_DELTA 擂台阈值 sweep**（在 [0.10, 0.15, 0.17, 0.20] 上各跑 autonomous fixed loop，看哪个值 CLIP std 最低 + 攻擂率落在 15-40% 健康区间）；monkey-patch config + 自动恢复，`--dry-run` 验证拓扑
 - `vlm_hard_constraint.py` —— **VLM 硬约束命中率评测**（读 sweep 聚合 JSON，30 张图 × qwen-vl-max 逐 keyword 判 present）；独立打补丁 CLIP "图里东西多"盲点，不烧文生图配额，约 780 秒跑完 30 张
 - `dataset.py` —— 主 benchmark 题源 + `--dump` 导出 `benchmark_themes.json`
+- `_analyze_arena_ablation_significance.py` —— 对消融 +18.2pp 差值补不确定性量化：keyword 级 McNemar 精确检验 + 主题级 bootstrap 95% CI（零 API，读已有 JSON）
+- `_sweep_kw_sensitivity.py` —— **kw 定义严/松敏感度全池扫描（A2）**：对冻结 HARD_CONSTRAINTS 的 22 题 kw 各写 strict/loose 变体重判 44 图，给 +18.2pp 配上定义无关的稳健区间 [+9.1, +24.2]pp（消融报告 §2.7）
+- `_probe_pairwise_position_bias.py` —— **B1 位置偏置探针（含自我证伪复盘）**：历史攻擂对局双向重判，表面显著后诊断出选择-复现混杂并主动降级——docstring 是完整的混杂机制说明
+- `_probe_position_bias_fresh_pairs.py` —— **B1b 无偏探针**：新鲜配对（选择与 judge 无关）双向重判，方向反转为偏 A 位（p=0.0156）
+- `_rerun_arena_randomized_layout.py` —— **B2-lite 随机化布局无图擂台重跑**：量化 B3a 随机化 before/after 攻擂率（49.2%→55.9%，ns）+ 位置审计给出与 B1b 反向的弱信号——方向锁不死恰好验证"随机化不赌方向"
+
+> 上面四个 `_probe/_sweep/_rerun` 脚本合起来是 position-bias 审计的完整故事线（发现 → 显著 → 自我证伪 → 方向反转 → 再反转 → 随机化防御落地），通俗版见 [`METHODOLOGY.md`](METHODOLOGY.md) §7.5、严谨版见 [sweep 报告 §6.3 #1](REPORT_pairwise_win_delta_sweep_2026-06-30.md)。
 
 ## 主跑命令（n=32 × 3 run · 12h overnight）
 
@@ -81,7 +89,7 @@ python -m eval.analyze_clip_dual outputs/eval/eval_clip_<timestamp>.json
 | [`REPORT_autonomous_n5_20260627.md`](REPORT_autonomous_n5_20260627.md) | LLM-driven 改图循环点亮 + eval 三臂对比（single_pass / autonomous(fixed) / autonomous(llm)）+ 诚实性指标 + VLM 独立裁判（n=5，负面 + caveat 充足）| 2026-06-27 |
 | [`REPORT_pairwise_win_delta_sweep_2026-06-30.md`](REPORT_pairwise_win_delta_sweep_2026-06-30.md) | 擂台 `PAIRWISE_WIN_DELTA` 阈值 sweep（3 delta × n=10）+ 主题×delta 全景对比 + 攻擂率异常 surface | 2026-06-30 |
 | [`REPORT_vlm_hard_constraint_20260701.md`](REPORT_vlm_hard_constraint_20260701.md) | VLM 硬约束命中率（30 张图逐 keyword yes/no）—— 独立打补丁 CLIP "图里东西多"盲点；rich 题 δ=0.17 命中率 80% 佐证 sweep 结论 | 2026-07-01 |
-| [`REPORT_arena_ablation_20260701.md`](REPORT_arena_ablation_20260701.md) | **擂台机制净收益消融**：arm A (`max_poem_rounds=0`, 无擂台) vs arm B (`max_poem_rounds=2`, 有擂台)，主池 n=22（04-22 backend）+ 辅池 n=10（03-03 backend）—— CLIP mean 平手（Δ -0.002）但 VLM 硬约束 arm B 主池 +18.2pp（60.6% → 78.8%），结论保留擂台 | 2026-07-01 |
+| [`REPORT_arena_ablation_20260701.md`](REPORT_arena_ablation_20260701.md) | **擂台机制净收益消融**：arm A (`max_poem_rounds=0`, 无擂台) vs arm B (`max_poem_rounds=2`, 有擂台)，主池 n=22（04-22 backend）+ 辅池 n=10（03-03 backend）—— CLIP mean 平手（Δ -0.002）但 VLM 硬约束 arm B 主池 +18.2pp（60.6% → 78.8%），结论保留擂台。**后续补强（07-05/07-06）**：§2.5 McNemar+bootstrap 显著性、§2.6 跨家族 VLM 复核（glm-4v-plus 同向 +15.2pp）、§2.7 kw 定义严/松包络 [+9.1, +24.2]pp、§6.4 position-bias 探针系列注记 | 2026-07-01（持续更新） |
 | [`REPORT_eval_refine_LoRA_n32_20260702.md`](REPORT_eval_refine_LoRA_n32_20260702.md) | **eval_refine 主报告**：LoRA baseline + qwen-plus 单轮 refine（n=32 主 benchmark，生产链路真实场景）—— 改动率 53.1%、cohesion +0.031 全样本 / +0.074 改动样本主导、rhyme 因 feedback 硬约束零效果、pingze -0.004 副作用；refine 真实价值维度是"意境连贯度重塑"而非 LoRA 弱项押韵优化 | 2026-07-02 |
 
 完整方法论（公式 / 系数 / 评委 prompt 全文 / 阈值清单）冻结在 [`METHODOLOGY.md`](METHODOLOGY.md) —— 后续代码漂移仍能解释这份报告。
