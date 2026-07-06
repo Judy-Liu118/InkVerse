@@ -1,4 +1,4 @@
-# InkVerse · 诗画墨语
+﻿# InkVerse · 诗画墨语
 
 [![tests](https://github.com/Judy-Liu118/InkVerse/actions/workflows/tests.yml/badge.svg)](https://github.com/Judy-Liu118/InkVerse/actions/workflows/tests.yml)
 
@@ -12,12 +12,12 @@
 
 以下三组均为评估 run 的真实产物（擂台进化终稿 + CLIP 择优终图），未经人工挑改字句：
 
-| 「写一首羁旅的五言绝句，<br>要有客舍和孤灯」 | 「写一首田园的七言绝句，<br>要有耕牛和炊烟」 | 「写一首七言律诗，<br>主题是客愁」 |
+| 「写一首春景的五言律诗，<br>要有桃花和啼莺」 | 「写一首送别的七言律诗，<br>要有长亭和折柳」 | 「写一首七言律诗，<br>主题是客愁」 |
 |---|---|---|
-| ![客舍孤灯](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260702_094058/delta_0.17/13_%E5%AE%A2%E8%88%8D%E5%AD%A4%E7%81%AF%E5%A4%9C_gen2_clip0.342.jpg) | ![春野炊烟](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_131315/delta_0.17/06_%E5%B0%8F%E6%A1%A5%E4%BB%84%E4%BB%84%E9%85%92%E6%97%97%E6%96%9C_gen1_clip0.334.jpg) | ![客愁](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/04_%E9%A3%8E%E7%BF%BB%E5%A2%A8%E6%B5%AA%E5%AE%A2%E8%A1%A3%E5%8D%95_gen1_clip0.347.jpg) |
-| **《客舍孤灯》**<br>客舍孤灯夜<br>江云入梦来<br>月华清似水<br>风度淡如梅 | **《春野炊烟》**<br>小桥仄仄酒旗斜<br>茅舍依山势自嵬<br>稚子牵牛归径晚<br>一痕炊影漾春杯 | **《客愁》**<br>风翻墨浪客衣单<br>霜凝石径暮烟寒<br>雁衔夕照千峰瘦<br>雨织灯痕一水残<br>孤棹摇波星欲堕<br>半窗移竹影初攒<br>归期暗数芦花雪<br>故国遥看月浸滩 |
+| ![春晓桃莺](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_131315/delta_0.17/03_%E6%98%A5%E8%89%B2%E6%9F%93%E9%9D%92%E7%95%B4_gen1_clip0.335.jpg) | ![长亭折柳](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260702_094058/delta_0.17/16_%E9%9C%9C%E5%87%9D%E5%8F%A4%E9%81%93%E6%9A%AE%E4%BA%91%E5%AF%92_gen1_clip0.324.jpg) | ![客愁](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/04_%E9%A3%8E%E7%BF%BB%E5%A2%A8%E6%B5%AA%E5%AE%A2%E8%A1%A3%E5%8D%95_gen1_clip0.347.jpg) |
+| **《春晓桃莺》**<br>春色染青畴<br>风回燕影稠<br>桃腮初破晓<br>柳眼乍含羞<br>蝶戏新晴暖<br>莺梭旧径幽<br>谁家双玉笛<br>吹落一溪流 | **《长亭折柳》**<br>霜凝古道暮云寒<br>客路迢迢未抵安<br>孤馆一灯摇影瘦<br>空山万木带烟残<br>归心已逐南飞雁<br>别泪犹沾北去鞍<br>行尽关河肠欲断<br>长亭折柳月将阑 | **《客愁》**<br>风翻墨浪客衣单<br>霜凝石径暮烟寒<br>雁衔夕照千峰瘦<br>雨织灯痕一水残<br>孤棹摇波星欲堕<br>半窗移竹影初攒<br>归期暗数芦花雪<br>故国遥看月浸滩 |
 
-左、中两例是 rich 题（用户点名的意象——客舍/孤灯、耕牛/炊烟——须在诗与画中同时兑现，左例经 VLM 硬约束核查 2/2 命中），右例是 sparse 抽象主题。更多逐题三方对比见 [sweep 报告](eval/REPORT_pairwise_win_delta_sweep_2026-06-30.md) §3、擂台有无的双图并排见[消融报告](eval/REPORT_arena_ablation_20260701.md) §4.1。
+左、中两例是 rich 题（用户点名的意象——桃花/啼莺、长亭/折柳——须在诗与画中同时兑现，中例经 VLM 硬约束核查 2/2 命中，画中孤馆的一盏灯正对"孤馆一灯摇影瘦"），右例是 sparse 抽象主题（霜径、雁阵、竹影、月浸滩等诗中意象在画面逐一可辨）。更多逐题三方对比见 [sweep 报告](eval/REPORT_pairwise_win_delta_sweep_2026-06-30.md) §3、擂台有无的双图并排见[消融报告](eval/REPORT_arena_ablation_20260701.md) §4.1。
 
 ## 流程
 
@@ -202,15 +202,16 @@ python app.py
 创作要求：*写一首描写夏天的七言绝句，要有意向荷花*
 
 模型配置：诗歌生成 LoRA + 意图评分 qwen-plus + 诗名 qwen-plus + 提示词 qwen-max + 图像 z-image-turbo + 编辑 qwen-image-edit-max
-![全自主创作·初始](docs/images/example1-auto-init.png)
-![评分详情](docs/images/example1-auto-score.png)
+
+| 全自主创作·初始 | 评分详情 |
+|---|---|
+| <img src="https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example1-auto-init.png" alt="全自主创作·初始" width="380"> | <img src="https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example1-auto-score.png" alt="评分详情" width="380"> |
 
 第一轮改图后 CLIP 从 0.312 提升至 0.333，达标退出循环。改图指令为"增加竹荫下的曲径和池亭的细节描绘"。
-改图前：
-![改图前](docs/images/example1-before.png)
 
-改图后：
-![改图后](docs/images/example1-after.png)
+| 改图前（0.312） | 改图后（0.333） |
+|---|---|
+| <img src="https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example1-before.png" alt="改图前" width="330"> | <img src="https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example1-after.png" alt="改图后" width="330"> |
 
 ### 示例二：回滚机制
 
@@ -218,17 +219,16 @@ python app.py
 
 第一轮改图 CLIP 从 0.302 退至 0.269——改动降低了图文一致性。系统回滚到初始图，第二轮从初始图出发继续改，而非在改坏的图上叠加修改。最终两轮未达目标，自动退回历史最优结果（0.302）。
 
-原版得分0.302：
-![原版](docs/images/example2-original.png)
+| 原版（0.302） | 第一次修改（0.269 ↓） | 第二次修改（0.291 ↓） |
+|---|---|---|
+| <img src="https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example2-original.png" alt="原版" width="250"> | <img src="https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example2-edit1.png" alt="第一次修改" width="250"> | <img src="https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example2-edit2.png" alt="第二次修改" width="250"> |
 
-第一版修改，增加月光洒在鹤羽毛上的细节，增强幽静感。（保留原图构图，仅修改指令涉及内容），得分0.269低于原版：
-![第一次修改](docs/images/example2-edit1.png)
+- 第一次修改：增加月光洒在鹤羽毛上的细节，增强幽静感（保留原图构图，仅修改指令涉及内容）——得分 0.269 低于原版
+- 第二次修改：由于第一版得分低于原版，系统**回滚到原版图**上重新修改，而非在第一版的残骸上继续。增强霜覆盖山岭的效果，突出秋意浓厚——得分 0.291 仍低于原版
 
-第二版修改——由于第一版得分低于原版，系统回滚到原版图上重新修改，而非在第一版的残骸上继续。增强霜覆盖山岭的效果，突出秋意浓厚。（保留原图构图，仅修改指令涉及内容），得分0.291仍低于原版：
-![第二次修改](docs/images/example2-edit2.png)
+两轮得分均低于原版，回退原版，最终效果：
 
-得分均低于原版，回退原版，最终效果：
-![最终效果](docs/images/example2-final.png)
+<img src="https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example2-final.png" alt="最终效果" width="700">
 
 ### 示例三：输入已有诗 + 手动改图
 
@@ -236,23 +236,23 @@ python app.py
 
 先用全自主生成一首边塞诗。若对某首诗更满意，将创作要求清空、诗文粘贴到文本框，点击「开始创作」。系统跳过生成环节，直接用这首诗生成图像。图为对原图不满意选原擂主诗点击开始创作生成：
 
-![开始创作·初始](docs/images/example3-init.png)
+![开始创作·初始](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example3-init.png)
 
 对画面不满意时，在"改图意见"框输入具体修改指令：
 
 - "在画面中加上将军，体现将军白发不胜簪"
-![修改一·加将军](docs/images/example3-edit1.png)
+![修改一·加将军](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example3-edit1.png)
 
 - 发现给的意见太粗糙将军太大了，在此基础上进一步提出修改意见，"不要这么大的将军，将军小一些，背对着，可以坐在战马上"
-![修改二·将军调小](docs/images/example3-edit2.png)
+![修改二·将军调小](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example3-edit2.png)
 
 每次点击「图像编辑」，系统基于当前图像按指令局部修改。
 
 最终修改后和修改前图片对比：
-![修改前后对比](docs/images/example3-compare.png)
+![修改前后对比](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example3-compare.png)
 
 ### 示例四：生成诗和图后点击生成报告
-![生成报告](docs/images/example4-report.png)
+![生成报告](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example4-report.png)
 
 ## 目录结构
 
