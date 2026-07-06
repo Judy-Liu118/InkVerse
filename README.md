@@ -1,10 +1,23 @@
 # InkVerse · 诗画墨语
 
+[![tests](https://github.com/Judy-Liu118/InkVerse/actions/workflows/tests.yml/badge.svg)](https://github.com/Judy-Liu118/InkVerse/actions/workflows/tests.yml)
+
 **AI 古诗创作与水墨画生成系统** —— 本地 LoRA 生成格律诗 + Z-Image Turbo 文生图 + Pairwise 进化择优。消费级显卡可运行。
 
 输入"写一首描写夏天的七言绝句，要有意向荷花"，系统从生成五首候选、硬门控筛选、擂台进化打磨到最终配图出稿，全程无需人工介入。
 
 古诗生成使用本地 LoRA 微调模型（Qwen2.5-1.5B + LoRA，古典诗词数据集训练），图像生成使用本地 FP8 量化 Z-Image Turbo。两者分时加载，消费级 8GB 显存可运行。古诗评审、切题判断、诗名与提示词生成等语言任务调用 API（推荐阿里百炼 qwen 系列）——本地小模型在鉴赏类环节与大模型存在显著差距。
+
+## 作品示例
+
+以下三组均为评估 run 的真实产物（擂台进化终稿 + CLIP 择优终图），未经人工挑改字句：
+
+| 「写一首春景的五言绝句，<br>要有柳树和燕子」 | 「写一首田园的七言绝句，<br>要有耕牛和炊烟」 | 「写一首七言律诗，<br>主题是客愁」 |
+|---|---|---|
+| ![春柳燕烟](eval/assets/report_images/20260630_131315/delta_0.17/01_风暖莺梭柳_gen1_clip0.326.jpg) | ![春野炊烟](eval/assets/report_images/20260630_131315/delta_0.17/06_小桥仄仄酒旗斜_gen1_clip0.334.jpg) | ![客愁](eval/assets/report_images/20260630_202046/delta_0.20/04_风翻墨浪客衣单_gen1_clip0.347.jpg) |
+| **《春柳燕烟》**<br>风暖莺梭柳<br>云轻燕剪烟<br>花飞分远近<br>水自向东流 | **《春野炊烟》**<br>小桥仄仄酒旗斜<br>茅舍依山势自嵬<br>稚子牵牛归径晚<br>一痕炊影漾春杯 | **《客愁》**<br>风翻墨浪客衣单<br>霜凝石径暮烟寒<br>雁衔夕照千峰瘦<br>雨织灯痕一水残<br>孤棹摇波星欲堕<br>半窗移竹影初攒<br>归期暗数芦花雪<br>故国遥看月浸滩 |
+
+左、中两例是 rich 题（用户点名的意象——柳/燕、耕牛/炊烟——须在诗与画中同时兑现），右例是 sparse 抽象主题。更多逐题三方对比见 [sweep 报告](eval/REPORT_pairwise_win_delta_sweep_2026-06-30.md) §3、擂台有无的双图并排见[消融报告](eval/REPORT_arena_ablation_20260701.md) §4.1。
 
 ## 流程
 
