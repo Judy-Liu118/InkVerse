@@ -47,8 +47,8 @@ def test_model_usage_as_dict_has_all_modules():
 
 
 def test_serialize_deserialize_round_trip():
-    """app.py 里的 _serialize_state / _deserialize_state 序列化往返。"""
-    from app import _serialize_state, _deserialize_state
+    """app_handlers.py 里的 _serialize_state / _deserialize_state 序列化往返。"""
+    from app_handlers import _serialize_state, _deserialize_state
 
     s = AgentState(
         user_input="春日山行",
