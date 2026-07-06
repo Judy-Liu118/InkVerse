@@ -1,0 +1,28 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # 完整 requirements.txt 是 CUDA 向的（unsloth/xformers/bitsandbytes），
+      # CI 上不可安装也不需要：测试套件全部基于 mock，不调 API、不加载权重。
+      # 唯一的重依赖是 CPU 版 torch（core/poem/generator.py 顶层 import）。
+      - name: Install test dependencies (CPU torch, no CUDA stack)
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install pytest gradio openai pypinyin pingshui-rhyme requests Pillow pyyaml python-dotenv
+
+      - name: Run tests
+        run: pytest tests -q
