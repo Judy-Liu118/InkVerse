@@ -124,11 +124,8 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
         state.log("自主模式", "提示词生成失败，终止", state.error)
         yield state
         return
+    # _phase_prompt_review 内部兜底（异常时沿用原 prompt），不会置 ERROR
     state = agent._phase_prompt_review(state)
-    if state.phase == Phase.ERROR:
-        state.log("自主模式", "提示词自检失败，终止", state.error)
-        yield state
-        return
 
     # ═════════════════════════════════════════════════════════════════════
     # 第 4 步：生图 + CLIP 双锚点评分 + 反思

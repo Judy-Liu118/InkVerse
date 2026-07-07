@@ -110,9 +110,8 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
             state = self._phase_prompt(state)
             if state.phase == Phase.ERROR:
                 return state
+            # _phase_prompt_review 内部兜底（异常时沿用原 prompt），不会置 ERROR
             state = self._phase_prompt_review(state)
-            if state.phase == Phase.ERROR:
-                return state
             state = self._phase_image_clip(state)
             state = self._phase_reflect(state)
             state.phase = Phase.DONE
@@ -627,19 +626,36 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
             return "Qwen2.5-1.5B+LoRA（本地微调）"
         return f"{model}（{backend}）" if model else backend
 
-    @staticmethod
-    def _refine_prompt_for_retry(original: str, retry_idx: int) -> str:
-        lines = original.strip().split("\n")
+    # 阶梯式重试精炼的段头（EN/CN 双语，对应 core/image/prompt.py 模板）
+    _RETRY_CONTENT_HEADS = ("subject:", "environment:", "atmosphere:",
+                            "主体:", "主体：", "环境:", "环境：", "氛围:", "氛围：")
+    _RETRY_STYLE_HEADS = ("art style:", "艺术风格:", "艺术风格：")
+
+    @classmethod
+    def _refine_prompt_for_retry(cls, original: str, retry_idx: int) -> str:
+        """CLIP 不达标时的阶梯式提示词精炼（只改生图输入，评分锚点仍用原 prompt）。
+
+        第 1 次重试：只保留内容承载段并加清晰化前缀（假设失败源于样板段稀释主体）；
+        第 2 次起：进一步剥掉段标签压成逗号短语（假设结构化格式妨碍模型理解），
+        但保留风格锚（style 后缀行 + Art Style 段），避免末次重试画风漂离。
+        """
+        lines = [l.strip() for l in original.strip().split("\n") if l.strip()]
         if retry_idx == 1:
-            key_lines = [
-                l.strip() for l in lines
-                if any(l.strip().lower().startswith(k) for k in ("subject:", "environment:", "atmosphere:"))
-            ]
+            key_lines = [l for l in lines if l.lower().startswith(cls._RETRY_CONTENT_HEADS)]
             core = " ".join(key_lines) if key_lines else original
             return f"clear composition, detailed, {core}"
-        else:
-            parts = [l.split(":", 1)[1].strip() for l in lines if ":" in l]
-            return ", ".join(parts[:4]) if parts else original
+
+        def _section_value(line: str) -> str:
+            return re.split(r"[:：]", line, maxsplit=1)[1].strip()
+
+        keep_heads = cls._RETRY_CONTENT_HEADS + cls._RETRY_STYLE_HEADS
+        vals = [_section_value(l) for l in lines if l.lower().startswith(keep_heads)]
+        # style_suffix 前缀行（无段头的首行）是风格锚，一并保留
+        style_prefix = [lines[0]] if lines and not re.search(r"[:：]", lines[0]) else []
+        if vals:
+            return ", ".join(style_prefix + vals)
+        parts = [_section_value(l) for l in lines if re.search(r"[:：]", l)]
+        return ", ".join(parts[:4]) if parts else original
 
     @staticmethod
     def _clean_revised_prompt(text: str) -> str:
@@ -661,9 +677,13 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
 
     @staticmethod
     def _default_auto_feedback(state: AgentState) -> str:
+        # 全英文：该反馈会被嵌进 _fallback_edit_prompt 的英文编辑指令句，
+        # 中英掺杂对 T2I 模型是最差形式
         if state.visual_keywords_en:
-            return f"强化诗歌核心意象：{state.visual_keywords_en[:60]}，让主体更清晰、光线更集中"
-        return "强化画面主体、季节氛围和空间层次，让构图更清晰"
+            return (f"Strengthen the poem's core imagery: {state.visual_keywords_en[:60]}; "
+                    "make the main subject clearer and the lighting more focused")
+        return ("Strengthen the main subject, seasonal atmosphere and spatial layering "
+                "for a clearer composition")
 
     @staticmethod
     def _clip_status(raw: float, attempt: int, exhausted: bool = False) -> str:
@@ -683,23 +703,6 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
         if not goal:
             return "用户未提供明确要求，仅执行保守诗画流程。"
         return f"用户明确要求：{goal[:160]}"
-
-    @staticmethod
-    def _parse_brief_plan(raw: str) -> tuple:
-        brief = ""
-        plan = ""
-        brief_match = re.search(r"BRIEF\s*[:：]\s*(.*?)(?=\n\s*PLAN\s*[:：]|$)", raw, flags=re.I | re.S)
-        plan_match = re.search(r"PLAN\s*[:：]\s*(.*)$", raw, flags=re.I | re.S)
-        if brief_match:
-            brief = brief_match.group(1).strip()
-        if plan_match:
-            plan = plan_match.group(1).strip()
-        if not brief:
-            lines = [line.strip() for line in raw.splitlines() if line.strip()]
-            brief = lines[0] if lines else "围绕用户要求生成诗画作品。"
-        if not plan:
-            plan = raw.strip()
-        return brief[:220], plan[:500]
 
     @staticmethod
     def _clip_anchor_weights(keywords_en: str) -> tuple:

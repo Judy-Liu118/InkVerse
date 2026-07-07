@@ -202,8 +202,12 @@ class _PoemRefineMixin:
     def _local_score_champion(self, poem: str, num_lines: int,
                               chars_per_line: int,
                               state: AgentState = None) -> dict:
-        """本地评分。进化阶段沿用 arena 的切题分，不虚高。"""
-        topic = getattr(state, 'champion_topic', 1.0) if state else 1.0
+        """本地评分。进化阶段沿用 arena 的切题分，不虚高。
+
+        兜底 0.5 与 AgentState 字段默认值/序列化兜底一致（实际不可达：字段恒存在）；
+        且擂主与挑战者共用同一 topic，该分量是场内公共常数，不影响胜负比较。
+        """
+        topic = getattr(state, 'champion_topic', 0.5) if state else 0.5
         return self.poem_gen.scorer.local_score_poem(poem, num_lines,
                                                       chars_per_line,
                                                       topic_score=topic)
@@ -337,7 +341,7 @@ class _PoemRefineMixin:
         champ_local = self._local_score_champion(champion, num_lines, chars_per_line, state=state)
         _log.info("擂台·当前擂主 %s", self._format_score_log(champ_local, 0.0))
 
-        topic_score = getattr(state, 'champion_topic', 1.0)
+        topic_score = getattr(state, 'champion_topic', 0.5)
         topic_hint = ""
         if topic_score < 0.7:
             topic_hint = (f"\n\n【重要】当前诗作与用户要求的主题契合度偏低（切题分仅{topic_score:.1f}），"
@@ -349,11 +353,17 @@ class _PoemRefineMixin:
                 critique = topic_hint + "\n" + critique
             directions = []
             for ci in range(CHALLENGERS_PER_ROUND):
-                fb = self._auto_poem_feedback(state, critique=(
-                    critique if ci == 0 else
-                    critique + "\n请从另一个完全不同的维度给出修改建议，"
-                    "不要重复之前的建议方向。"
-                ))
+                if ci == 0 or not directions:
+                    fb_critique = critique
+                else:
+                    # 两次调用是独立无状态的，必须把已有方向文本注入，
+                    # "不要重复"才有所指
+                    prev = "；".join(d[0] for d in directions)
+                    fb_critique = (
+                        critique + f"\n已给出的建议方向：{prev}\n"
+                        "请从另一个完全不同的维度给出修改建议，不要与上述方向重复。"
+                    )
+                fb = self._auto_poem_feedback(state, critique=fb_critique)
                 if fb not in [d[0] for d in directions]:
                     directions.append((fb, f"方向{ci+1}"))
             _log.info("擂台第%d轮·%d个方向:", evo_round + 1, len(directions))
