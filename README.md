@@ -249,10 +249,12 @@ python app.py
 每次点击「图像编辑」，系统基于当前图像按指令局部修改。
 
 最终修改后和修改前图片对比：
-![修改前后对比](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example3-compare.png)
+
+<img src="https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example3-compare.png" alt="修改前后对比" width="360">
 
 ### 示例四：生成诗和图后点击生成报告
-![生成报告](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example4-report.png)
+
+<img src="https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/example4-report.png" alt="生成报告" width="440">
 
 ## 目录结构
 
