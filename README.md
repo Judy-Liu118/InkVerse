@@ -10,25 +10,25 @@
 
 ## 作品示例
 
-以下六组均为评估 run 的真实产物（擂台进化终稿 + CLIP 择优终图），未经人工挑改字句。
+以下六组均为评估 run 的真实产物（终稿诗 + CLIP 择优终图），未经人工挑改字句。带 † 的两首出自消融实验的"无擂台"对照臂——一次生成直达此质量，选入正好展示基座 LoRA 的底子；其余四首为带擂台的全流程产物。
 
-第一排三首是 sparse 抽象主题（只给主题词，不点名意象），看意境经营与体裁跨度（七律 / 五律 / 五绝）：
+第一排三首是 sparse 抽象主题（只给主题词，不点名意象），看意境经营：
 
-| 「写一首七言律诗，<br>主题是客愁」 | 「写一首五言律诗，<br>主题是归隐」 | 「写一首五言绝句，<br>主题是无常」 |
+| 「写一首七言律诗，<br>主题是客愁」 | 「写一首五言绝句，<br>主题是溪声」 | 「写一首七言绝句，<br>主题是春雨」 |
 |---|---|---|
-| ![客愁](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/04_%E9%A3%8E%E7%BF%BB%E5%A2%A8%E6%B5%AA%E5%AE%A2%E8%A1%A3%E5%8D%95_gen1_clip0.347.jpg) | ![归隐青山](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260702_094058/delta_0.17/10_%E6%98%94%E5%B9%B4%E8%BE%9E%E7%A6%84%E5%8E%BB_gen1_clip0.325.jpg) | ![无常](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260702_094058/delta_0.17/22_%E4%B8%80%E7%93%A3%E9%9A%8F%E9%A3%8E%E8%BF%9C_gen3_clip0.292.jpg) |
-| **《客愁》**<br>风翻墨浪客衣单<br>霜凝石径暮烟寒<br>雁衔夕照千峰瘦<br>雨织灯痕一水残<br>孤棹摇波星欲堕<br>半窗移竹影初攒<br>归期暗数芦花雪<br>故国遥看月浸滩 | **《归隐青山》**<br>昔年辞禄去<br>此日得闲身<br>云外千峰静<br>林间一径新<br>茶烟浮石榻<br>松影落衣巾<br>莫道归来晚<br>青山正待人 | **《无常》**<br>一瓣随风远<br>深林暗度香<br>欲追云外影<br>何必问苍茫 |
+| ![客愁](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_202046/delta_0.20/04_%E9%A3%8E%E7%BF%BB%E5%A2%A8%E6%B5%AA%E5%AE%A2%E8%A1%A3%E5%8D%95_gen1_clip0.347.jpg) | ![溪声](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260702_094058/delta_0.17/07_%E5%BE%AE%E9%A3%94%E7%A9%BF%E7%AB%B9%E5%BE%84_gen2_clip0.308.jpg) | ![春雨江钓](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_205747/delta_0.14/10_%E6%B1%9F%E5%A4%B4%E6%98%A5%E9%9B%A8%E6%BF%AF%E4%BA%91%E5%B1%8F_gen1_clip0.322.jpg) |
+| **《客愁》**<br>风翻墨浪客衣单<br>霜凝石径暮烟寒<br>雁衔夕照千峰瘦<br>雨织灯痕一水残<br>孤棹摇波星欲堕<br>半窗移竹影初攒<br>归期暗数芦花雪<br>故国遥看月浸滩 | **《溪声》**<br>微飔穿竹径<br>清响落云间<br>松影摇溪浅<br>苔痕浸水闲 | **《春雨江钓》**<br>江头春雨濯云屏<br>风飐垂杨绿欲停<br>偶倚沙痕听鹭语<br>一蓑烟水钓波青 |
 
-左例诗中意象在画面逐一可辨（霜径、雁阵、竹影、月浸滩）；中例颈联"茶烟浮石榻"被直接画了出来——石榻上方一缕茶烟；右例整幅画就是起句本身：深林光影里一瓣随风飘远。
+左例诗中意象在画面逐一可辨（霜径、雁阵、竹影、月浸滩）；中例竹径夹溪、苔痕浸水，画面即是诗境；右例"濯云屏"（雨洗云如洗屏风）是 sweep 报告赏析认定的全篇诗眼，画中鹭、垂杨、烟水俱在。
 
-第二排看**点名意象的兑现**：左、中两首是 rich 题，用户点名的意象须在诗与画中同时出现，均经 VLM 硬约束核查 2/2 命中：
+第二排看**点名意象的兑现**：三首均为 rich 题，用户点名的意象须在诗与画中同时出现，均经 VLM 硬约束核查 2/2 命中：
 
-| 「写一首冬景的七言绝句，<br>要有飞雪和寒鸦」 | 「写一首田园的七言绝句，<br>要有耕牛和炊烟」 | 「写一首七言绝句，<br>主题是春雨」 |
+| 「写一首送别的七言律诗，<br>要有长亭和折柳」† | 「写一首禅意的七言绝句，<br>要有古刹和钟鼓」† | 「写一首田园的七言绝句，<br>要有耕牛和炊烟」 |
 |---|---|---|
-| ![雪岭寒鸦](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260702_094058/delta_0.17/04_%E5%AD%A4%E6%9D%BE%E7%8B%AC%E7%AB%8B%E5%8D%83%E5%B3%B0%E8%82%83_gen1_clip0.341.jpg) | ![春村耕趣](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260702_094058/delta_0.17/09_%E6%9D%91%E8%B7%AF%E9%A3%8E%E6%B8%85%E9%9B%A8%E8%BF%87%E7%A8%80_gen3_clip0.322.jpg) | ![春雨江钓](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260630_205747/delta_0.14/10_%E6%B1%9F%E5%A4%B4%E6%98%A5%E9%9B%A8%E6%BF%AF%E4%BA%91%E5%B1%8F_gen1_clip0.322.jpg) |
-| **《雪岭寒鸦》**<br>孤松独立千峰肃<br>霜骨棱棱势自遒<br>雪压虬枝犹抱月<br>寒鸦忽掠一痕秋 | **《春村耕趣》**<br>村路风清雨过稀<br>春来无事亦忘机<br>耕牛未肯还田去<br>犹把新泥护柳枝 | **《春雨江钓》**<br>江头春雨濯云屏<br>风飐垂杨绿欲停<br>偶倚沙痕听鹭语<br>一蓑烟水钓波青 |
+| ![离亭折柳](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260702_085340/delta_0.17/16_%E6%B1%9F%E5%A4%B4%E9%85%92%E5%8A%9B%E5%B7%B2%E5%BE%AE%E9%86%BA_gen1_clip0.322.jpg) | ![古刹钟声](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260702_085340/delta_0.17/21_%E5%8F%A4%E5%88%B9%E9%92%9F%E5%A3%B0%E5%A4%9C%E6%9C%AA%E4%BC%91_gen1_clip0.332.jpg) | ![春村耕趣](https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/eval/assets/report_images/20260702_094058/delta_0.17/09_%E6%9D%91%E8%B7%AF%E9%A3%8E%E6%B8%85%E9%9B%A8%E8%BF%87%E7%A8%80_gen3_clip0.322.jpg) |
+| **《离亭折柳》**<br>江头酒力已微醺<br>一别相逢几许春<br>风递梅花知远近<br>水含明月见相亲<br>青门路断无多雨<br>白发人归少有尘<br>欲向离亭折杨柳<br>可怜无力更伤神 | **《古刹钟声》**<br>古刹钟声夜未休<br>松间野鹤伴云游<br>人间岁月如流水<br>更向何时得少留 | **《春村耕趣》**<br>村路风清雨过稀<br>春来无事亦忘机<br>耕牛未肯还田去<br>犹把新泥护柳枝 |
 
-左例雪压虬枝与掠空寒鸦同框；中例"耕牛未肯还田去，犹把新泥护柳枝"正是消融报告里"擂台把丢失的用户约束补回来"的直接铁证主题（无擂台臂两个约束全丢，擂台臂 2/2）；右例"濯云屏"（雨洗云如洗屏风）是 sweep 报告赏析认定的全篇诗眼，画中鹭、垂杨、烟水俱在。更多逐题三方对比见 [sweep 报告](eval/REPORT_pairwise_win_delta_sweep_2026-06-30.md) §3、擂台有无的双图并排见[消融报告](eval/REPORT_arena_ablation_20260701.md) §4.1。
+左例"欲向离亭折杨柳"——画面水畔长廊连着离亭，垂柳正拂过画前；中例首句"古刹钟声夜未休"锚定两个约束，殿中铜钟与松间野鹤俱在画上；右例"耕牛未肯还田去，犹把新泥护柳枝"是消融报告里"擂台把丢失的用户约束补回来"的直接铁证主题（无擂台臂两个约束全丢，擂台臂 2/2）。更多逐题三方对比见 [sweep 报告](eval/REPORT_pairwise_win_delta_sweep_2026-06-30.md) §3、擂台有无的双图并排见[消融报告](eval/REPORT_arena_ablation_20260701.md) §4.1。
 
 ## 流程
 
