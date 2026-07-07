@@ -7,6 +7,19 @@
 
 ---
 
+## 2026-07-07 · 合掌检测补联内上下句交叉
+
+- **commit**: `aebb3b6` · `core/poem/scorer.py` `_check_synonym_clash`
+- **变更**: 原实现只逐句检测句内同义词群复用（docstring 声称"同一联"与实现不符）；
+  现补上合掌本义的联内检测——一联上下句各用同一同义词群中的不同词
+  （如上句"残阳"、下句"落日"）也触发 `CLASH_PENALTY_PER_HIT`（×0.75）。
+  句内检测保留；切句从按行改为按标点/换行（对一句一行的既有格式无差异）。
+- **breaking**: `clash_penalty` 从此更严，影响品质分 total（候选废弃线判定）与
+  arena `local_score`——此后 run 的品质分与历史 run 不严格可比。注意
+  [`eval/METHODOLOGY.md`](eval/METHODOLOGY.md) 中该指标的冻结描述本就是
+  "同联同义词"，本次是**实现追平既有定义**，非定义变更。旧数据不追溯重算。
+- **动机**: 2026-07-07 人工代码检视发现实现与定义不符。
+
 ## 2026-07-06 · 擂台守擂 pairwise A/B 位随机化（B3a）
 
 - **commit**: `4dcb677` · `core/agent/poem_refiner.py` 新增 `pairwise_judge_randomized`
