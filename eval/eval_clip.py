@@ -11,7 +11,7 @@ eval.eval_clip -- CLIP 双锚点 vs 单锚点对齐分对比（项目核心创�
     然后用同一张图同时按 3 套锚点策略评分：
       · single_anchor (prompt-only)：仅提示词锚点
       · dual_anchor   (production)：双锚点 + 稀疏自适应权重（当前生产配置）
-      · poem_only_anchor：仅诗歌锚点（对照）
+      · poem_only_anchor：仅古诗锚点（对照）
     报告：
       · 双锚点相对单锚点的平均提升 Δ + 显著性比例
       · 关键词密度分层（rich vs sparse）下的提升差异
@@ -141,7 +141,7 @@ def _score_with_anchors(clip_eval, image, *, keywords_en: str, prompt: str,
     """根据 mode 返回该锚点策略下的 CLIP raw 分。
 
     · prompt_only  → 仅提示词锚点
-    · poem_only    → 仅诗歌锚点（关键词为空时返回 None）
+    · poem_only    → 仅古诗锚点（关键词为空时返回 None）
     · dual         → 当前生产配置（含稀疏自适应权重）
     """
     raw_prompt = clip_eval.score_raw_cosine(image, prompt)
@@ -403,7 +403,7 @@ def main():
     p.add_argument("--genres", nargs="*", default=None)
     p.add_argument("--density", choices=["rich", "sparse"], default=None)
     p.add_argument("--poem-model",   default="local_lora",
-                   help="诗歌生成模型；LoRA 优先")
+                   help="古诗生成模型；LoRA 优先")
     p.add_argument("--prompt-model", default="qwen-max",
                    help="英文提示词生成模型；推荐 qwen-max")
     p.add_argument("--scorer",       default="qwen-plus",

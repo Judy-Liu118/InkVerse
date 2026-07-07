@@ -1,5 +1,5 @@
 """
-eval.eval_poem -- 诗歌生成质量同台对比（BWS 选 best → 跨模型 pairwise）
+eval.eval_poem -- 古诗生成质量同台对比（BWS 选 best → 跨模型 pairwise）
 
 跑法：
     # 主跑：3 路 × 3 评委（跨家族 self-bias 抗性）
@@ -998,7 +998,7 @@ def _render_markdown_multirun(args, models: List[str],
 # ── 主流程 ────────────────────────────────────────────────────────────────
 
 def main():
-    p = argparse.ArgumentParser(description="诗歌生成质量同台对比（BWS + 跨模型 pairwise）")
+    p = argparse.ArgumentParser(description="古诗生成质量同台对比（BWS + 跨模型 pairwise）")
     p.add_argument("--models", nargs="+", default=None,
                    help="参赛模型列表，如 --models local_base local_lora qwen-plus")
     p.add_argument("--model-a", default=None, help="（兼容）2 路对比的模型 A")

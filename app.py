@@ -159,7 +159,7 @@ with gr.Blocks(
                 )
                 poem_model = gr.Dropdown(
                     choices=POEM_MODEL_CHOICES, value=_DEFAULT_POEM_MODEL,
-                    label="诗歌生成模型", show_label=True,
+                    label="古诗生成模型", show_label=True,
                 )
                 title_model = gr.Dropdown(
                     choices=MODEL_CHOICES, value="qwen-plus",

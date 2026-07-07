@@ -1,5 +1,5 @@
 """
-core.poem.theme -- 诗歌主题同义词表、意象库、平仄押韵逻辑
+core.poem.theme -- 古诗主题同义词表、意象库、平仄押韵逻辑
 """
 import re
 import pypinyin

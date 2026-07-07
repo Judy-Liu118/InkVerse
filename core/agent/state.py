@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 class Phase(Enum):
     INIT             = "初始化"
     PLAN             = "任务规划"
-    POEM_GEN         = "诗歌生成"
+    POEM_GEN         = "古诗生成"
     KEYWORD_EXTRACT  = "视觉关键词提取"
     TITLE_GEN        = "诗名生成"
     PROMPT_GEN       = "提示词生成"
@@ -36,8 +36,8 @@ class ModelUsage:
 
     def as_dict(self) -> Dict[str, str]:
         return {
-            "诗歌生成":   self.poem_gen   or "—",
-            "诗歌评分":   self.poem_scorer or "—",
+            "古诗生成":   self.poem_gen   or "—",
+            "古诗评分":   self.poem_scorer or "—",
             "诗名生成":   self.title_gen  or "—",
             "提示词生成": self.prompt_gen or "—",
             "图像生成":   self.image_gen  or "—",
@@ -95,7 +95,7 @@ class AgentState:
     image_history:      List[Dict[str, str]] = field(default_factory=list)
     image_edit_history: List[str] = field(default_factory=list)
 
-    # ── 诗歌得分 ─────────────────────────────────────────────────────────────
+    # ── 古诗得分 ─────────────────────────────────────────────────────────────
     best_poem_score:       float = 0.0   # 含 required_coeff 的最终选择分
     best_poem_art_quality: float = 0.0   # 不含 required_coeff 的艺术品质分
 

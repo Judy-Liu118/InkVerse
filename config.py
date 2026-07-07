@@ -68,7 +68,7 @@ GPU_BEAST_MODE = False
 # 基于 CLIPScore 论文（Hessel et al., EMNLP 2021）：
 #   · 原始余弦相似度在文本-图像生成中自然聚类在 0.15~0.35
 #   · ~0.25 为"合理"水平，~0.30 为"明显好"
-#   · 中国水墨画（低饱和度）+ 中文诗歌锚点（CLIP 英文训练）额外增加难度
+#   · 中国水墨画（低饱和度）+ 中文古诗锚点（CLIP 英文训练）额外增加难度
 # 参考区间（ViT-B/32 + 中文水墨画）：
 #   > 0.30  优秀（该组合的天花板附近）
 #   0.25~0.30  良好，图文高度一致
@@ -80,17 +80,20 @@ CLIP_ENABLED     = True
 CLIP_THRESHOLD   = 0.22
 CLIP_MAX_RETRIES = 2
 CLIP_MODEL_PATH = r"D:\AI_Models\clip-vit-base-patch32"
+# 注意：该模型为英文-only CLIP（OpenAI 原版），中文文本近似噪声。UI 选"中文提示词"
+# 路径时 CLIP 分仅供参考、不具比较意义；eval 管线全部走英文提示词，不受此限制影响。
+# 如需可信的中文对齐评分，应换 Chinese-CLIP（如 OFA-Sys/chinese-clip-vit-base-patch16）。
 # 诗-提示词语义一致性阈值（CLIP text-text 余弦相似度，低于此值触发提示词重生成）
 CLIP_PROMPT_ALIGN_THRESHOLD = 0.15
 
 # ===== CLIP 双锚点权重 =====
-CLIP_POEM_WEIGHT   = 0.6   # 诗歌锚点权重（图像与诗歌关键词的匹配度）
+CLIP_POEM_WEIGHT   = 0.6   # 古诗锚点权重（图像与古诗关键词的匹配度）
 CLIP_PROMPT_WEIGHT = 0.4   # 提示词锚点权重（图像与提示词的匹配度）
 # 关键词稀疏时（<4 词，哲理/抽象诗常见）降诗锚权重，避免噪声锚点拖低评分
 CLIP_SPARSE_POEM_WEIGHT   = 0.3
 CLIP_SPARSE_PROMPT_WEIGHT = 0.7
 CLIP_SPARSE_WORD_THRESHOLD = 4
-# ===== 诗歌生成参数 =====
+# ===== 古诗生成参数 =====
 POEM_CANDIDATE_COUNT = 5
 POEM_MAX_TOKENS = 160
 
@@ -98,7 +101,7 @@ POEM_MAX_TOKENS = 160
 LORA_MAX_SEQ_LEN = 320
 POEM_TEMPERATURE = 0.8
 
-# ===== 诗歌品质控制 =====
+# ===== 古诗品质控制 =====
 # 废弃线：total 分低于此值的候选直接丢弃，不允许被选为最终结果
 # total = (维度加权和 × 重复惩罚) × 必须意象系数，反映综合品质
 POEM_QUALITY_THRESHOLD = 0.70

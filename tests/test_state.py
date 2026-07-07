@@ -38,7 +38,7 @@ def test_trace_md_renders_all_steps():
 def test_model_usage_as_dict_has_all_modules():
     mu = ModelUsage(poem_gen="qwen-plus", title_gen="qwen-max")
     d = mu.as_dict()
-    assert d["诗歌生成"] == "qwen-plus"
+    assert d["古诗生成"] == "qwen-plus"
     assert d["诗名生成"] == "qwen-max"
     # 未设置的字段返回 dash 占位
     assert d["提示词生成"] == "—"

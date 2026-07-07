@@ -26,11 +26,11 @@ class AutonomousConfig:
     CLIP 阈值参考：
       基于 CLIPScore 论文（Hessel et al., EMNLP 2021），原始余弦相似度在
       文本-图像生成任务中自然聚类在 0.15~0.35 的窄区间内，0.25 为"合理"水平，
-      0.30 为"明显好"的水平。考虑到中国水墨画（低饱和度）和中文诗歌锚点（CLIP
+      0.30 为"明显好"的水平。考虑到中国水墨画（低饱和度）和中文古诗锚点（CLIP
       用英文训练）的额外难度，推荐阈值如下：
         · 基础生成阈值（CLIP_THRESHOLD）：0.22 — 低于此建议重试
         · 自主模式目标（target_clip_score）：0.30 — 有挑战但可达
-        · 参考上界（ViT-B/32 + 中文诗歌 + 水墨）：≈0.32 — CLIPScore 论文
+        · 参考上界（ViT-B/32 + 中文古诗 + 水墨）：≈0.32 — CLIPScore 论文
           区间的经验外推，非本项目实测上限
       升级到 ViT-L/14 可平均提分 0.02~0.04。
     """
@@ -81,7 +81,7 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
     )
 
     # ═════════════════════════════════════════════════════════════════════
-    # 第 1 步：规划 + 诗歌生成（pairwise 五选二）
+    # 第 1 步：规划 + 古诗生成（pairwise 五选二）
     # ═════════════════════════════════════════════════════════════════════
     state = agent._phase_plan(state)
     if state.phase == Phase.ERROR:
@@ -91,7 +91,7 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
 
     state = agent._phase_poem_arena(state)
     if state.phase == Phase.ERROR:
-        state.log("自主模式", "诗歌生成失败，终止", state.error)
+        state.log("自主模式", "古诗生成失败，终止", state.error)
         yield state
         return
 

@@ -133,6 +133,36 @@ def test_synonym_clash_groups_disjoint():
         seen |= group
 
 
+def test_synonym_clash_intra_sentence():
+    """句内冗余：同一句同时用同义词群的两个词。"""
+    poem = "明月皓月共此时\n江水东流去不回"
+    assert PoemScorer._check_synonym_clash(poem) == 0.75
+
+
+def test_synonym_clash_across_couplet():
+    """合掌本义：一联上下句各用同义词群中的不同词（上句残阳、下句落日）。"""
+    poem = "残阳照孤城\n落日满秋山"
+    assert PoemScorer._check_synonym_clash(poem) == 0.75
+
+
+def test_synonym_clash_clean_poem():
+    """无同义复用的诗不应触发扣分。"""
+    poem = "春眠不觉晓\n处处闻啼鸟\n夜来风雨声\n花落知多少"
+    assert PoemScorer._check_synonym_clash(poem) == 1.0
+
+
+def test_synonym_clash_same_word_repeated_is_not_clash():
+    """上下句重复同一个词属重字问题（另有重复惩罚处理），不计合掌。"""
+    poem = "明月照高楼\n明月满西洲"
+    assert PoemScorer._check_synonym_clash(poem) == 1.0
+
+
+def test_synonym_clash_not_flagged_across_couplet_boundary():
+    """第 2 句与第 3 句分属不同联，同义词分居两联不算合掌。"""
+    poem = "孤舟横野渡\n残阳下远山\n落日沉极浦\n江声自往还"
+    assert PoemScorer._check_synonym_clash(poem) == 1.0
+
+
 # ── BAD_PATTERNS 黑名单 ────────────────────────────────────────────────────
 def test_bad_patterns_loaded():
     """堆砌词黑名单是硬门控的核心，必须有内容。"""

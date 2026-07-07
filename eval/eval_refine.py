@@ -155,7 +155,7 @@ def main():
     p.add_argument("--genres", nargs="*", default=None)
     p.add_argument("--density", choices=["rich", "sparse"], default=None)
     p.add_argument("--model", default="local_lora",
-                   help="baseline 诗歌生成模型；默认 local_lora 贴齐 app.py 生产 UI 默认，"
+                   help="baseline 古诗生成模型；默认 local_lora 贴齐 app.py 生产 UI 默认，"
                         "测生产链路 refine 提升；API baseline（qwen-plus/max）通常已近满分、"
                         "refine 无处涨（详见冒烟数据 2026-07-02）")
     p.add_argument("--refine-model", default="qwen-plus",

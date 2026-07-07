@@ -50,7 +50,7 @@ class ModelAdapter:
     `allow_lora_fallback`：API 调用失败时是否降级到本地 LoRA。
         默认 False —— 评分/起名/提示词等需要结构化输出或英文的任务，
         LoRA 给不了正确结果，静默降级反而会让下游静默崩坏；
-        仅诗歌生成 adapter 显式设 True，让 API 瞬时故障时还能兜底产出。
+        仅古诗生成 adapter 显式设 True，让 API 瞬时故障时还能兜底产出。
     """
 
     def __init__(
@@ -95,7 +95,7 @@ class ModelAdapter:
             if not is_local and self._can_fallback_to_lora():
                 _log.warning(
                     "API 调用失败，自动降级到本地 LoRA 模型重试"
-                    "（仅适用于诗歌生成任务）"
+                    "（仅适用于古诗生成任务）"
                 )
                 try:
                     saved_backend = self.backend

@@ -8,6 +8,44 @@ from core.logger import get_logger
 
 _log = get_logger(__name__)
 
+# 负面提示词剥离：T2I 模型按正向语义理解 prompt，"负面清单"里点名的物体
+# 反而更容易被画出来（negation 基本无效），所以 LLM 输出里的负面内容必须整块删掉。
+_NEG_HEADER_RE = re.compile(
+    r"\s*[-*·]?\s*(forbidden|negative\s+prompt|禁加元素|负面提示词)\s*[:：]", re.I)
+# 独立负面条目行（不带块标题时也可能出现），如 "- no people" / "避免出现现代建筑"
+_NEG_ITEM_RE = re.compile(
+    r"\s*(?:[-*·]\s*(?:no|without|avoid)\b|(?:[-*·]\s*)?(?:不要出现|避免出现|禁止出现))", re.I)
+# 结构化模板的正向段头（EN/CN 双语），命中即视为负面块结束
+_SECTION_HEADER_RE = re.compile(
+    r"\s*(subject|environment|atmosphere|color\s*palette|art\s*style|composition"
+    r"|主体|环境|氛围|色调|艺术风格|构图)\s*[:：]", re.I)
+
+
+def strip_negative_prompt_lines(text: str) -> str:
+    """删除 LLM 输出中的负面提示词内容，支持多行块。
+
+    命中负面块标题后持续丢行，直到空行或下一个正向段头才恢复保留，
+    避免 "Negative prompt:\\n- no people\\n- no text" 只删标题、条目泄漏进正向 prompt。
+    """
+    kept = []
+    in_neg_block = False
+    for line in (text or "").splitlines():
+        if _NEG_HEADER_RE.match(line):
+            in_neg_block = True
+            continue
+        if in_neg_block:
+            if not line.strip():
+                in_neg_block = False
+                continue
+            if _SECTION_HEADER_RE.match(line):
+                in_neg_block = False
+            else:
+                continue
+        if _NEG_ITEM_RE.match(line):
+            continue
+        kept.append(line)
+    return "\n".join(kept).strip()
+
 
 class PromptGenerator:
     def __init__(self):
@@ -59,12 +97,7 @@ class PromptGenerator:
 
     @staticmethod
     def _clean_prompt_output(text: str) -> str:
-        kept = []
-        for line in (text or "").splitlines():
-            if re.match(r"\s*(forbidden|negative prompt|禁加元素|负面提示词)\s*[:：]", line, flags=re.I):
-                continue
-            kept.append(line)
-        return "\n".join(kept).strip()
+        return strip_negative_prompt_lines(text)
 
     def _build_structured_en_prompt(self, poem: str) -> str:
         return f"""Analyze the following Chinese classical poem and output ONLY an English visual description in the exact format below. Do not include any explanation or intro text.

@@ -59,13 +59,21 @@ class CLIPEvaluator:
         normalized = self.score(image, text)
         return round(normalized * 2.0 - 1.0, 4)
 
-    @staticmethod
-    def _clip_text(prompt: str) -> str:
+    # 只保留承载具体画面内容的三段（Subject / Environment / Atmosphere）：
+    # 其余三段 Color Palette / Art Style / Composition 对每张图近似常量样板
+    # （水墨风描述人人相同），在 77 token 预算内会稀释语义、挤占真正区分内容的词。
+    # 段头匹配 EN/CN 双语模板（core/image/prompt.py）。
+    _KEY_SECTIONS_EN = ("subject:", "environment:", "atmosphere:")
+    _KEY_SECTIONS_CN = ("主体:", "主体：", "环境:", "环境：", "氛围:", "氛围：")
+
+    @classmethod
+    def _clip_text(cls, prompt: str) -> str:
         lines = prompt.strip().split("\n")
         key_lines = []
         for line in lines:
             stripped = line.strip()
-            if stripped.lower().startswith(("subject:", "environment:", "atmosphere:")):
+            if (stripped.lower().startswith(cls._KEY_SECTIONS_EN)
+                    or stripped.startswith(cls._KEY_SECTIONS_CN)):
                 key_lines.append(stripped)
         extracted = " ".join(key_lines) if key_lines else prompt
         return extracted[:300]

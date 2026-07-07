@@ -2,12 +2,12 @@
 core.agent.agent -- 诗画创作引擎
 
 双锚点 CLIP（消弭 Poem→Prompt→Image 链的语义损耗）：
-  anchor_a = visual_keywords_en  ← 从诗歌直接提取，代表诗的意境
+  anchor_a = visual_keywords_en  ← 从古诗直接提取，代表诗的意境
   anchor_b = english_prompt      ← 扩散模型提示词，代表模型的理解
   clip_score_final = 0.6 × clip(image, a) + 0.4 × clip(image, b)
 
 每个 phase 方法独立修改 AgentState，上层可按需逐步调用或一次性调用 run()。
-诗歌修改/守擂逻辑见 poem_refiner.py，图像编辑逻辑见 image_editor.py。
+古诗修改/守擂逻辑见 poem_refiner.py，图像编辑逻辑见 image_editor.py。
 """
 from __future__ import annotations
 
@@ -182,10 +182,10 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
             state.poem = "\n".join(lines)
             state.model_usage.poem_gen = "用户直接提供"
             state.model_usage.poem_scorer = self._adapter_desc(self.score_adapter)
-            state.log("诗歌生成", "使用用户提供的诗歌", state.poem, model="用户输入")
+            state.log("古诗生成", "使用用户提供的古诗", state.poem, model="用户输入")
             return state
 
-        state.log("诗歌生成", "开始生成候选（品质筛选模式）",
+        state.log("古诗生成", "开始生成候选（品质筛选模式）",
                   f"用户要求: {state.user_input[:60]}", model=model_desc)
         try:
             from config import (
@@ -209,7 +209,7 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
             if "生成失败" in poem:
                 state.phase = Phase.ERROR
                 state.error = poem
-                state.log("诗歌生成", "失败", poem)
+                state.log("古诗生成", "失败", poem)
                 return state
 
             state.poem = poem
@@ -223,7 +223,7 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
 
             qual_count = len(result["qualified"])
             rej_count  = len(result["rejected"])
-            state.log("诗歌生成",
+            state.log("古诗生成",
                       f"体裁: {genre_name}，品质筛选完成"
                       f"（合格 {qual_count} + 废弃 {rej_count}，"
                       f"模式={selection_mode}，"
@@ -232,11 +232,11 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
         except Exception as e:
             state.phase = Phase.ERROR
             state.error = str(e)
-            _log.exception("诗歌生成 [_phase_poem] 异常")
-            state.log("诗歌生成", "异常", str(e))
+            _log.exception("古诗生成 [_phase_poem] 异常")
+            state.log("古诗生成", "异常", str(e))
         return state
 
-    # ── Arena 诗歌生成（全自主模式专用）───────────────────────────────────
+    # ── Arena 古诗生成（全自主模式专用）───────────────────────────────────
     def _phase_poem_arena(self, state: AgentState) -> AgentState:
         """Arena 海选：生成 5 首 → 硬门控 → 本地分 Top3 → arena pairwise → 冠军。"""
         state.phase = Phase.POEM_GEN
@@ -248,12 +248,12 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
             state.backup_poem = ""
             state.model_usage.poem_gen = "用户直接提供"
             state.model_usage.poem_scorer = self._adapter_desc(self.score_adapter)
-            state.log("诗歌生成", "使用用户提供的诗歌", state.poem, model="用户输入")
+            state.log("古诗生成", "使用用户提供的古诗", state.poem, model="用户输入")
             return state
 
         from config import POEM_QUALITY_THRESHOLD
         _MAX_RETRIES = 2
-        state.log("诗歌生成", "开始生成候选（arena 海选模式）",
+        state.log("古诗生成", "开始生成候选（arena 海选模式）",
                   f"用户要求: {state.user_input[:80]}", model=model_desc)
 
         qualified_pool = []
@@ -269,7 +269,7 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
                 new_qualified = [g for g in gated
                                  if g["local"]["total"] >= POEM_QUALITY_THRESHOLD]
                 qualified_pool.extend(new_qualified)
-                state.log("诗歌生成",
+                state.log("古诗生成",
                           f"第{gen_round+1}轮",
                           f"门控通过 {len(gated)} 首，合格 {len(new_qualified)} 首，"
                           f"累计合格 {len(qualified_pool)} 首（需 ≥ 3）",
@@ -279,12 +279,12 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
             except Exception as e:
                 state.phase = Phase.ERROR
                 state.error = str(e)
-                _log.exception("诗歌生成 [arena 重试轮] 异常")
-                state.log("诗歌生成", "异常", str(e))
+                _log.exception("古诗生成 [arena 重试轮] 异常")
+                state.log("古诗生成", "异常", str(e))
                 return state
 
         if len(qualified_pool) < 3:
-            state.log("诗歌生成",
+            state.log("古诗生成",
                       f"经 {1 + _MAX_RETRIES} 轮仅攒到 {len(qualified_pool)} 首合格诗，"
                       f"直接选用最优",
                       model=model_desc)
@@ -304,7 +304,7 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
         state.model_usage.poem_gen = model_desc
         state.model_usage.poem_scorer = self._adapter_desc(self.score_adapter)
         state.poem_selection_mode = "arena"
-        state.log("诗歌生成",
+        state.log("古诗生成",
                   f"体裁: {genre_name}，arena 海选完成",
                   f"候选 {len(qualified_pool)} 首，"
                   f"冠军本地分={state.champion_local_total:.3f}，"
@@ -321,7 +321,7 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
         try:
             result = self.score_adapter.generate(msg, max_tokens=80, temperature=0.2)
             state.visual_keywords_en = result.strip().replace("\n", ", ")
-            state.log("视觉关键词提取", "从诗歌提取 CLIP 锚点（诗-图直连）",
+            state.log("视觉关键词提取", "从古诗提取 CLIP 锚点（诗-图直连）",
                       result, model=self._adapter_desc(self.score_adapter))
         except Exception as e:
             state.visual_keywords_en = ""
@@ -401,7 +401,11 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
                     state.log("提示词自检", "发现缺口并自动改写", rewritten[:180], model=model_desc)
                     self._check_prompt_alignment(state)
                     return state
-            state.log("提示词自检", "通过", review[:180], model=model_desc)
+                # 30 字符下限拦截退化改写（截断/空产物），此时保留原 Prompt
+                state.log("提示词自检", "改写产物过短已丢弃，沿用原 Prompt",
+                          review[:180], model=model_desc)
+            else:
+                state.log("提示词自检", "通过", review[:180], model=model_desc)
         except Exception as e:
             state.prompt_review = f"Prompt 自检失败: {e}"
             state.log("提示词自检", "异常，沿用原 Prompt", str(e), model=model_desc)
@@ -413,7 +417,7 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
         """用 CLIP text encoder 检查诗锚点与提示词的语义一致性。
 
         两段文本走 CLIP text encoder 做余弦相似度。偏低说明提示词可能
-        遗漏或曲解了诗歌的核心视觉意象。
+        遗漏或曲解了古诗的核心视觉意象。
         """
         from config import CLIP_ENABLED, CLIP_PROMPT_ALIGN_THRESHOLD
         if not CLIP_ENABLED or not state.visual_keywords_en or not state.prompt:
@@ -432,7 +436,7 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
                 )
                 state.log("提示词匹配", "⚠ 语义一致性偏低",
                           f"CLIP 诗-提示词余弦 raw={raw:.4f}（阈值 {CLIP_PROMPT_ALIGN_THRESHOLD}），"
-                          f"归一化={norm:.3f}。提示词可能遗漏诗歌核心意象，建议关注。")
+                          f"归一化={norm:.3f}。提示词可能遗漏古诗核心意象，建议关注。")
             else:
                 _log.debug(
                     "[提示词匹配] ✓ 诗-提示词语义一致性正常 raw=%.4f | 归一化=%.3f",
@@ -518,7 +522,7 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
                     raw_a = norm_a = 0.0
                     final_raw = raw_b
                     final_norm = norm_b
-                    score_desc = f"提示词-图={raw_b:.3f}（无诗歌关键词锚点）"
+                    score_desc = f"提示词-图={raw_b:.3f}（无古诗关键词锚点）"
 
                 state.clip_score_poem = norm_a
                 state.clip_score_prompt = norm_b
@@ -639,16 +643,12 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
 
     @staticmethod
     def _clean_revised_prompt(text: str) -> str:
+        from core.image.prompt import strip_negative_prompt_lines
         text = text.strip().strip("`")
         text = re.sub(r"^```[a-zA-Z]*\s*", "", text)
         text = re.sub(r"\s*```$", "", text)
         text = re.sub(r"^(revised image prompt|prompt)\s*[:：]\s*", "", text, flags=re.I)
-        kept = []
-        for line in text.splitlines():
-            if re.match(r"\s*(forbidden|negative prompt|禁加元素|负面提示词)\s*[:：]", line, flags=re.I):
-                continue
-            kept.append(line)
-        return "\n".join(kept).strip()
+        return strip_negative_prompt_lines(text)
 
     @staticmethod
     def _fallback_edit_prompt(original: str, feedback: str) -> str:

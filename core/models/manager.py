@@ -43,7 +43,7 @@ class ModelManager:
         self._base_tokenizer = None
         self._z_pipe = None
 
-    # ── 微调模型 (诗歌生成) ───────────────────────────────────────────────────
+    # ── 微调模型 (古诗生成) ───────────────────────────────────────────────────
     @property
     def fine_model(self):
         if self._fine_model is None:
@@ -61,7 +61,7 @@ class ModelManager:
         _require_local_path(LORA_PATH, "LoRA Adapter")
         self._release_base()
         self._release_z_pipe()
-        _log.info(">>> 开始从本地加载微调模型 (诗歌生成)...")
+        _log.info(">>> 开始从本地加载微调模型 (古诗生成)...")
         from unsloth import FastLanguageModel
         from peft import PeftModel
         from config import LORA_MAX_SEQ_LEN

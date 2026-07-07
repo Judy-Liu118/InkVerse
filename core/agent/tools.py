@@ -124,7 +124,7 @@ class PlanTool(_AgentBoundTool):
 
 class GeneratePoemTool(_AgentBoundTool):
     name = "generate_poem"
-    description = "生成候选诗歌，经多维度评分（意图/平仄/押韵/意象/聚合/重复）后选出最优"
+    description = "生成候选古诗，经多维度评分（意图/平仄/押韵/意象/聚合/重复）后选出最优"
     parameters = {"type": "object", "properties": {}, "required": []}
 
     def execute(self, state, **kwargs):
@@ -133,7 +133,7 @@ class GeneratePoemTool(_AgentBoundTool):
 
 class ExtractKeywordsTool(_AgentBoundTool):
     name = "extract_visual_keywords"
-    description = "从诗歌抽取英文视觉关键词，作为 CLIP 双锚点中的「诗-图」锚点"
+    description = "从古诗抽取英文视觉关键词，作为 CLIP 双锚点中的「诗-图」锚点"
     parameters = {"type": "object", "properties": {}, "required": []}
 
     def execute(self, state, **kwargs):
@@ -142,7 +142,7 @@ class ExtractKeywordsTool(_AgentBoundTool):
 
 class GenerateTitleTool(_AgentBoundTool):
     name = "generate_title"
-    description = "为诗歌生成 2-8 字的古典诗名"
+    description = "为古诗生成 2-8 字的古典诗名"
     parameters = {"type": "object", "properties": {}, "required": []}
 
     def execute(self, state, **kwargs):
@@ -151,7 +151,7 @@ class GenerateTitleTool(_AgentBoundTool):
 
 class GeneratePromptTool(_AgentBoundTool):
     name = "generate_image_prompt"
-    description = "将诗歌翻译为面向扩散模型的英文绘画提示词，并附加风格后缀"
+    description = "将古诗翻译为面向扩散模型的英文绘画提示词，并附加风格后缀"
     parameters = {"type": "object", "properties": {}, "required": []}
 
     def execute(self, state, **kwargs):

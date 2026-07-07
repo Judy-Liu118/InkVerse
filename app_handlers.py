@@ -97,8 +97,8 @@ def _deserialize_state(state_json: str) -> AgentState:
                 print(f"[State] last_image 恢复失败: {img_err}")
         mu_dict = data.get("model_usage", {})
         state.model_usage = ModelUsage(
-            poem_gen    = mu_dict.get("诗歌生成", ""),
-            poem_scorer = mu_dict.get("诗歌评分", ""),
+            poem_gen    = mu_dict.get("古诗生成", ""),
+            poem_scorer = mu_dict.get("古诗评分", ""),
             title_gen   = mu_dict.get("诗名生成", ""),
             prompt_gen  = mu_dict.get("提示词生成", ""),
             image_gen   = mu_dict.get("图像生成", ""),
@@ -215,7 +215,7 @@ def on_refine_poem(
     style: str,
     image_backend_val: str,
 ):
-    """根据用户意见修改诗歌，改完后自动重新生成提示词并重新生图。"""
+    """根据用户意见修改古诗，改完后自动重新生成提示词并重新生图。"""
     state = _deserialize_state(state_json)
     empty_state_json = "{}"
     if not feedback.strip():

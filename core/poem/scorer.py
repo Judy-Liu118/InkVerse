@@ -1,5 +1,5 @@
 """
-core.poem.scorer -- 诗歌评分系统
+core.poem.scorer -- 古诗评分系统
 
 多维度评分：意图匹配(LLM)、平仄、押韵、意象库、主题聚合、重复惩罚、必须意象检查。
 """
@@ -64,7 +64,7 @@ CLASH_PENALTY_PER_HIT = 0.75  # 发现一处合掌，品质分打 75 折
 
 
 class PoemScorer:
-    """诗歌多维度评分器。"""
+    """古诗多维度评分器。"""
 
     def __init__(self):
         self._classifier = PingZeClassifier()
@@ -686,20 +686,35 @@ C. 明显缺失的要素（若无请写"无"）："""
 
     @staticmethod
     def _check_synonym_clash(poem: str) -> float:
-        """检测同一联中是否出现意象合掌（同义词群复用），触发折扣。
+        """检测意象合掌（同义词群复用），触发折扣。两级检测：
 
-        例如同一句同时出现"银汉"和"银河"→判定合掌。
+        1. 句内冗余：同一句同时出现"银汉"和"银河"；
+        2. 联内合掌（合掌本义）：一联上下句各用同一同义词群中的不同词，
+           如上句"残阳"、下句"落日"，语义重复。
+
+        按标点/换行切句后，相邻两句为一联（绝句 2 联、律诗 4 联）。
         """
-        lines = [l.strip() for l in poem.split('\n') if l.strip()]
+        sentences = [s.strip() for s in re.split(r"[\n，。；、？！,;?!]", poem) if s.strip()]
         penalty = 1.0
         hits_found = []
-        for line in lines:
+        for sent in sentences:
             for group in _SYNONYM_CLASH_GROUPS:
-                matched = [word for word in group if word in line]
+                matched = [word for word in group if word in sent]
                 if len(matched) >= 2:
                     penalty *= CLASH_PENALTY_PER_HIT
                     hits_found.append(f"{matched}")
-                    _log.warning("[格律合掌] 行内意象重复: %s → ×%.2f", matched, CLASH_PENALTY_PER_HIT)
+                    _log.warning("[格律合掌] 句内意象重复: %s → ×%.2f", matched, CLASH_PENALTY_PER_HIT)
+        for i in range(0, len(sentences) - 1, 2):
+            upper, lower = sentences[i], sentences[i + 1]
+            for group in _SYNONYM_CLASH_GROUPS:
+                m_up = {w for w in group if w in upper}
+                m_low = {w for w in group if w in lower}
+                # 上下句各命中且非同一个词的简单重字 → 判合掌
+                if m_up and m_low and len(m_up | m_low) >= 2:
+                    penalty *= CLASH_PENALTY_PER_HIT
+                    hits_found.append(f"{sorted(m_up)}↔{sorted(m_low)}")
+                    _log.warning("[格律合掌] 联内上下句同义: %s ↔ %s → ×%.2f",
+                                 sorted(m_up), sorted(m_low), CLASH_PENALTY_PER_HIT)
         if hits_found:
             _log.info("[格律合掌] 共发现 %d 处合掌，合掌系数=%.2f", len(hits_found), penalty)
         return round(max(0.1, penalty), 4)

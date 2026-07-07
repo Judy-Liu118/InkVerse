@@ -222,7 +222,7 @@ def _poem_html(poem_text: str, title: str = "", placeholder: bool = False) -> st
 def _make_adapter(model_choice: str, *, allow_lora_fallback: bool = False) -> ModelAdapter:
     """构造 ModelAdapter。
 
-    `allow_lora_fallback`：只在调用方是「诗歌生成」时设 True。其它任务
+    `allow_lora_fallback`：只在调用方是「古诗生成」时设 True。其它任务
     （评分/起名/提示词等）需要结构化输出或英文，LoRA 给不了正确结果，
     API 失败时静默走 LoRA 反而会让下游静默崩坏，所以默认禁止降级。
     """

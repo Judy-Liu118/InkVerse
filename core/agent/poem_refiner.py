@@ -1,4 +1,4 @@
-"""诗歌修改与守擂进化 Mixin。"""
+"""古诗修改与守擂进化 Mixin。"""
 from __future__ import annotations
 
 import random
@@ -36,7 +36,7 @@ def pairwise_judge_randomized(scorer, champion: str, challenger: str,
 
 
 class _PoemRefineMixin:
-    """诗歌修改和守擂进化方法集。作为 Mixin 挂载在 PoetryAgent 上使用。"""
+    """古诗修改和守擂进化方法集。作为 Mixin 挂载在 PoetryAgent 上使用。"""
 
     _CHALLENGER_PROMPT = (
         "你是一位精通中国古典诗词的创作专家。\n"
@@ -58,7 +58,7 @@ class _PoemRefineMixin:
         model_desc = self._adapter_desc(adapter)
 
         if getattr(adapter, 'backend', '') in ('local', 'local_lora'):
-            state.log("诗歌修改", "⚠ 已跳过",
+            state.log("古诗修改", "⚠ 已跳过",
                       "LoRA 模型不具备改诗能力，请在「改诗模型」下拉框中选择 API 模型再试。",
                       model=model_desc)
             return state
@@ -83,7 +83,7 @@ class _PoemRefineMixin:
             clean = ["".join(ch for ch in l if "一" <= ch <= "鿿") for l in lines]
             char_ok = [l for l in clean if len(l) == expected_chars]
             if len(char_ok) < expected_lines:
-                state.log("诗歌修改", "⚠ 字数不符（已回滚）",
+                state.log("古诗修改", "⚠ 字数不符（已回滚）",
                           f"改后各行字数: {[len(l) for l in clean if l]}，"
                           f"应为 {expected_chars} 字×{expected_lines} 行。",
                           model=model_desc)
@@ -110,7 +110,7 @@ class _PoemRefineMixin:
 
             threshold = max(0.0, orig_score - score_tolerance)
             if orig_score > 0 and new_score < threshold:
-                state.log("诗歌修改", "⚠ 改后得分不足（已回滚）",
+                state.log("古诗修改", "⚠ 改后得分不足（已回滚）",
                           f"改后得分 {new_score:.3f} < 原始得分 {orig_score:.3f} - "
                           f"容差 {score_tolerance} = {threshold:.3f}\n"
                           f"改后各维度：{detail}",
@@ -137,11 +137,11 @@ class _PoemRefineMixin:
                 verdict = f"⚠ 持平 | 得分 {orig_score:.3f}→{new_score:.3f}"
             else:
                 verdict = f"⚠ 略降（容差内）| 得分 {orig_score:.3f}→{new_score:.3f}"
-            state.log("诗歌修改", verdict,
+            state.log("古诗修改", verdict,
                       f"修改方向：{feedback[:80]}\n改后各维度：{detail}",
                       model=model_desc, score=new_score)
         except Exception as e:
-            state.log("诗歌修改", "修改异常", str(e))
+            state.log("古诗修改", "修改异常", str(e))
         return state
 
     def refine_multiple_poems(

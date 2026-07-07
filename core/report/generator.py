@@ -247,15 +247,15 @@ class ReportGenerator:
 
         badges = ""
         if has_poem:
-            badges += badge("诗-图一致性", poem_raw, "诗歌关键词锚点 × 0.6")
+            badges += badge("诗-图一致性", poem_raw, "古诗关键词锚点 × 0.6")
         badges += badge("词-图一致性", prompt_raw, "英文提示词锚点 × 0.4")
         if has_poem:
             badges += badge("综合得分", final_raw, "加权平均")
 
         anchor_note = (
-            "双锚点评估：诗歌直接提取的视觉关键词（主） + 英文提示词（辅）"
+            "双锚点评估：古诗直接提取的视觉关键词（主） + 英文提示词（辅）"
             if has_poem else
-            "单锚点评估：英文提示词（诗歌关键词提取失败或未启用）"
+            "单锚点评估：英文提示词（古诗关键词提取失败或未启用）"
         )
 
         return f"""

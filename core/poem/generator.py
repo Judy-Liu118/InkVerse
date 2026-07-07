@@ -1,5 +1,5 @@
 """
-core.poem.generator -- 诗歌生成器
+core.poem.generator -- 古诗生成器
 
 两阶段分离：先全部生成候选，再统一评分，避免 fine/base 模型同时占用显存。
 """
@@ -65,7 +65,7 @@ class PoemGenerator:
         max_rounds: int = 3,
         min_qualified: int = 3,
     ) -> dict:
-        """带品质筛选的诗歌生成。
+        """带品质筛选的古诗生成。
 
         每轮生成一批候选 → 评分 → 按 total 分流（合格/废弃），
         合格池达标后停止补充生成，从合格池中选总分最高的作为最优结果。
