@@ -7,6 +7,17 @@
 
 ---
 
+## 2026-07-07 · 擂台第二挑战方向注入已有方向文本
+
+- **commit**: `42aa5ab` · `core/agent/poem_refiner.py` `_evolve_champion`
+- **变更**: 每轮第二个挑战方向的生成 prompt 原先只说"不要重复之前的建议方向"，
+  但两次 LLM 调用独立无状态，"之前的方向"对模型无所指；现把已生成的方向文本
+  显式注入第二次调用的 critique。
+- **breaking**: 挑战者多样性提升会改变攻擂率分布——此后 run 的攻擂率与历史 run
+  （delta sweep、arena ablation、B2-lite 等）跨期对比时须注明此差异，与 B3a
+  （A/B 位随机化）同理叠加。指标定义与判定口径均未变。
+- **动机**: 2026-07-07 人工代码检视发现该指令为对空指令。
+
 ## 2026-07-07 · 合掌检测补联内上下句交叉
 
 - **commit**: `aebb3b6` · `core/poem/scorer.py` `_check_synonym_clash`
