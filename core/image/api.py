@@ -209,7 +209,13 @@ class BailianImageAPI:
 
     @staticmethod
     def _resolve_modern_size(w: int, h: int) -> str:
-        """新同步接口用：归到 1024*1024 / 1024*768 / 768*1024 三档。"""
+        """新同步接口用：w/h 仅作宽高比意图（方/横/竖），归到三档离散尺寸。
+
+        新多模态接口只接受离散 size 档位且各模型支持集不同，
+        1024*1024 / 1024*768 / 768*1024 是跨模型的公共安全集（传任意
+        尺寸会 400）；统一档位也让跨 backend 的 CLIP 评分条件一致。
+        近似任意尺寸只有旧 wanx 异步接口支持（见 _resolve_size）。
+        """
         if abs(w - h) < 96:
             return "1024*1024"
         return "1024*768" if w > h else "768*1024"

@@ -54,6 +54,13 @@ class _PoemRefineMixin:
         self, state: AgentState, feedback: str,
         refine_adapter=None, score_tolerance: float = 0.03,
     ) -> AgentState:
+        """按 feedback 方向改写当前诗，品质分明显倒退时回滚。
+
+        score_tolerance 允许改后分数略降，原因有二：total 含 intent_llm
+        （LLM 打分，同一首诗重评本身有 ± 波动），严格要求不降会把评分噪声
+        当回归拒掉；且改诗方向来自审美 critique，瞄准的维度本地分只部分
+        覆盖——本地分在此是防倒退护栏，不是目标函数。
+        """
         adapter = refine_adapter or self.generation_adapter
         model_desc = self._adapter_desc(adapter)
 

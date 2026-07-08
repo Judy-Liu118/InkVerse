@@ -323,23 +323,22 @@ messages = render_messages(
 
 ## Tool 抽象与可调度性
 
-`core.agent.tools` 提供了一套 OpenAI Function Calling 兼容的工具层，把 `PoetryAgent` 的每个创作阶段（规划/生成/抽取意象/命名/提示词/自检/生图/反思/改诗/改图）封装成可枚举、可 introspection 的 Tool。每个 Tool 既可被业务代码直接调用，也可通过 `to_function_schemas()` 导出为 LLM tools 描述，用于未来对接 MCP、Agent 服务化或外部调度。
+`core.agent.tools` 提供 OpenAI Function Calling 兼容的工具基类（`AgentTool`）与注册表（`ToolRegistry`）：工具可枚举、可 introspection，`to_function_schemas()` 直接导出 LLM tools 描述。
+
+生产中真实使用它的是 LLM-driven 改图循环（`core.agent.controller`）：`build_loop_registry` 注册 `edit_image` / `refine_poem_and_regen` 两个工具，controller 把工具 schema 注入决策 prompt，LLM 返回的 JSON 决策经 `ToolRegistry.execute` 按名真实调度。
 
 ```python
-from core.agent import PoetryAgent
+from core.agent import PoetryAgent, build_loop_registry
 
 agent = PoetryAgent(...)
-reg = agent.tool_registry
-print(reg.names)
-# ['plan', 'generate_poem', 'extract_visual_keywords', 'generate_title',
-#  'generate_image_prompt', 'review_image_prompt', 'generate_image',
-#  'reflect', 'refine_poem', 'edit_image']
+reg = build_loop_registry(agent)
+print(reg.names)                      # ['edit_image', 'refine_poem_and_regen']
 
-schemas = reg.to_function_schemas()    # 可直接喂给 OpenAI tools=[...]
-state = reg.execute("plan", state)      # 按名调度
+schemas = reg.to_function_schemas()   # 注入 controller 决策 prompt 的 tools 描述
+state = reg.execute("edit_image", state, feedback="强化孤舟主体")   # 按名调度
 ```
 
-`PoetryAgent` 内部仍以 `_phase_*` 方法实现业务，Tool 层只做轻量 facade —— 避免维护两套实现。
+早期版本曾把全部 10 个 `_phase_*` 阶段都包成 Tool，但除上述两个外生产从未调度过，已删除——只保留被真实使用的抽象。
 
 ## 离线评估
 

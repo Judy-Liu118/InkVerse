@@ -1,53 +1,61 @@
 """
-test_tools -- Tool 抽象 + ToolRegistry 的注册与调度
+test_tools -- AgentTool 基类 + ToolRegistry 的注册与调度（通用行为）
+
+生产使用方是 controller.build_loop_registry（见 test_controller.py）；
+这里用 dummy 工具验证基类与注册表本身的契约。
 """
-from core.agent import PoetryAgent, ToolRegistry, AgentTool, build_default_registry
+import pytest
+
+from core.agent import ToolRegistry, AgentTool
 from core.agent.state import AgentState
-from core.agent.tools import (
-    GeneratePoemTool, PlanTool, RefinePoemTool,
-)
 
 
-def test_default_registry_contains_full_pipeline():
-    """默认 registry 应注册创作流水线全部 10 个工具。"""
-    agent = PoetryAgent()
-    reg = agent.tool_registry
-
-    expected = {
-        "plan", "generate_poem", "extract_visual_keywords",
-        "generate_title", "generate_image_prompt", "review_image_prompt",
-        "generate_image", "reflect", "refine_poem", "edit_image",
+class _MarkTool(AgentTool):
+    """把调用参数记到 state.error 字段上（借用现成字段，免 mock）。"""
+    name = "mark"
+    description = "测试用：记录被调用时收到的参数"
+    parameters = {
+        "type": "object",
+        "properties": {
+            "feedback": {"type": "string", "description": "任意标记文本"},
+        },
+        "required": ["feedback"],
     }
-    assert set(reg.names) == expected
-    assert len(reg) == len(expected)
+
+    def execute(self, state, feedback: str = "", **kwargs):
+        state.error = f"mark:{feedback}"
+        return state
+
+
+class _NoopTool(AgentTool):
+    name = "noop"
+    description = "测试用：什么都不做"
+    parameters = {"type": "object", "properties": {}, "required": []}
+
+    def execute(self, state, **kwargs):
+        return state
+
+
+def _registry():
+    return ToolRegistry().register(_MarkTool()).register(_NoopTool())
 
 
 def test_registry_lookup_and_contains():
-    agent = PoetryAgent()
-    reg = agent.tool_registry
-
-    assert "generate_poem" in reg
+    reg = _registry()
+    assert set(reg.names) == {"mark", "noop"}
+    assert len(reg) == 2
+    assert "mark" in reg
     assert "nonexistent" not in reg
-    tool = reg.get("generate_poem")
-    assert tool is not None
-    assert isinstance(tool, GeneratePoemTool)
+    assert isinstance(reg.get("mark"), _MarkTool)
     assert reg.get("nonexistent") is None
-
-
-def test_tool_registry_lazy_cached():
-    """同一个 PoetryAgent 多次访问 tool_registry 应返回同一个对象。"""
-    agent = PoetryAgent()
-    r1 = agent.tool_registry
-    r2 = agent.tool_registry
-    assert r1 is r2
 
 
 def test_function_schemas_are_openai_compatible():
     """每个 Tool 的 schema 必须满足 OpenAI Function Calling 形状。"""
-    agent = PoetryAgent()
-    schemas = agent.tool_registry.to_function_schemas()
+    reg = _registry()
+    schemas = reg.to_function_schemas()
 
-    assert len(schemas) == len(agent.tool_registry)
+    assert len(schemas) == len(reg)
     for s in schemas:
         assert s["type"] == "function"
         fn = s["function"]
@@ -59,31 +67,31 @@ def test_function_schemas_are_openai_compatible():
         assert "required" in params
 
 
-def test_refine_poem_tool_declares_feedback_param():
-    """refine_poem 必须在 schema 里声明 feedback 字段。"""
-    agent = PoetryAgent()
-    tool = agent.tool_registry.get("refine_poem")
-    assert isinstance(tool, RefinePoemTool)
-    schema = tool.to_function_schema()["function"]["parameters"]
+def test_declared_params_appear_in_schema():
+    schema = _MarkTool().to_function_schema()["function"]["parameters"]
     assert "feedback" in schema["properties"]
     assert "feedback" in schema["required"]
 
 
+def test_registry_execute_dispatches_with_kwargs():
+    """按名调度应把 kwargs 透传给工具并返回更新后的 state。"""
+    reg = _registry()
+    state = AgentState()
+    state = reg.execute("mark", state, feedback="hello")
+    assert state.error == "mark:hello"
+
+
 def test_registry_execute_unknown_raises():
     """调度未注册的工具应抛 KeyError，便于上层捕获。"""
-    agent = PoetryAgent()
-    state = AgentState()
-    import pytest
     with pytest.raises(KeyError):
-        agent.tool_registry.execute("not_a_real_tool", state)
+        _registry().execute("not_a_real_tool", AgentState())
 
 
 def test_register_duplicate_overrides_silently():
     """同名工具二次注册应覆盖（带 warning），不应抛异常。"""
-    agent = PoetryAgent()
     reg = ToolRegistry()
-    reg.register(PlanTool(agent))
-    reg.register(PlanTool(agent))   # 不应崩
+    reg.register(_NoopTool())
+    reg.register(_NoopTool())   # 不应崩
     assert len(reg) == 1
 
 
@@ -92,16 +100,5 @@ def test_register_tool_without_name_raises():
         name = ""
         def execute(self, state, **kwargs):
             return state
-    import pytest
     with pytest.raises(ValueError):
         ToolRegistry().register(_Anon())
-
-
-def test_plan_tool_executes_and_updates_state():
-    """PlanTool 是纯本地逻辑（无 LLM），可端到端验证。"""
-    agent = PoetryAgent()
-    state = AgentState(user_input="写一首春天的七言绝句")
-    state = agent.tool_registry.execute("plan", state)
-    assert state.creative_brief
-    assert state.agent_plan
-    assert state.trace, "PlanTool 应在 trace 留下记录"

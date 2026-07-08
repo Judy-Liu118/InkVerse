@@ -42,17 +42,6 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
         self._image_gen = None
         self._clip_eval = None
         self._clip_init_failed = False
-        self._tool_registry = None
-
-    # ── Tool 抽象层 ─────────────────────────────────────────────────────────
-    @property
-    def tool_registry(self):
-        """懒加载 ToolRegistry。把每个 _phase_* 方法包装成可枚举的 Tool，
-        便于未来对接 Function Calling / MCP 或外部调度。"""
-        if self._tool_registry is None:
-            from core.agent.tools import build_default_registry
-            self._tool_registry = build_default_registry(self)
-        return self._tool_registry
 
     # ── 懒加载属性 ───────────────────────────────────────────────────────────
     @property
@@ -503,33 +492,24 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
             # ── CLIP 双锚点评分 ──────────────────────────────────────────────
             state.phase = Phase.CLIP_EVAL
             try:
-                raw_b = clip_eval.score_raw_cosine(image, state.prompt)
-                norm_b = (raw_b + 1.0) / 2.0
-
+                s = self._clip_dual_anchor(clip_eval, image, state)
+                final_raw = s["final_raw"]
                 if state.visual_keywords_en:
-                    raw_a = clip_eval.score_raw_cosine(image, state.visual_keywords_en)
-                    norm_a = (raw_a + 1.0) / 2.0
-                    wa, wb = self._clip_anchor_weights(state.visual_keywords_en)
-                    final_raw = wa * raw_a + wb * raw_b
-                    final_norm = wa * norm_a + wb * norm_b
                     score_desc = (
-                        f"诗-图锚点={raw_a:.3f}(×{wa}) "
-                        f"提示词-图锚点={raw_b:.3f}(×{wb}) "
+                        f"诗-图锚点={s['raw_a']:.3f}(×{s['wa']}) "
+                        f"提示词-图锚点={s['raw_b']:.3f}(×{s['wb']}) "
                         f"→ 综合={final_raw:.3f}"
                     )
                 else:
-                    raw_a = norm_a = 0.0
-                    final_raw = raw_b
-                    final_norm = norm_b
-                    score_desc = f"提示词-图={raw_b:.3f}（无古诗关键词锚点）"
+                    score_desc = f"提示词-图={s['raw_b']:.3f}（无古诗关键词锚点）"
 
-                state.clip_score_poem = norm_a
-                state.clip_score_prompt = norm_b
-                state.clip_score_final = final_norm
+                state.clip_score_poem = s["norm_a"]
+                state.clip_score_prompt = s["norm_b"]
+                state.clip_score_final = s["final_norm"]
 
                 state.log("CLIP评分", f"尝试 {attempt+1}", score_desc,
                           score=final_raw, is_retry=is_retry,
-                          extra={"raw_a": raw_a, "raw_b": raw_b, "final": final_raw})
+                          extra={"raw_a": s["raw_a"], "raw_b": s["raw_b"], "final": final_raw})
 
                 if final_raw > best_score:
                     best_score = final_raw
@@ -567,23 +547,16 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
             if clip_eval is None:
                 state.clip_msg = "✓ 编辑完成（CLIP 评估器不可用）"
                 return state
-            raw_b = clip_eval.score_raw_cosine(state.image, state.prompt)
-            norm_b = (raw_b + 1.0) / 2.0
+            s = self._clip_dual_anchor(clip_eval, state.image, state)
+            final_raw = s["final_raw"]
             if state.visual_keywords_en:
-                raw_a = clip_eval.score_raw_cosine(state.image, state.visual_keywords_en)
-                norm_a = (raw_a + 1.0) / 2.0
-                wa, wb = self._clip_anchor_weights(state.visual_keywords_en)
-                final_raw = wa * raw_a + wb * raw_b
-                final_norm = wa * norm_a + wb * norm_b
-                desc = f"诗-图={raw_a:.3f}(×{wa}) 词-图={raw_b:.3f}(×{wb}) → 综合={final_raw:.3f}"
+                desc = (f"诗-图={s['raw_a']:.3f}(×{s['wa']}) "
+                        f"词-图={s['raw_b']:.3f}(×{s['wb']}) → 综合={final_raw:.3f}")
             else:
-                raw_a = norm_a = 0.0
-                final_raw = raw_b
-                final_norm = norm_b
-                desc = f"词-图={raw_b:.3f}"
-            state.clip_score_poem = norm_a
-            state.clip_score_prompt = norm_b
-            state.clip_score_final = final_norm
+                desc = f"词-图={s['raw_b']:.3f}"
+            state.clip_score_poem = s["norm_a"]
+            state.clip_score_prompt = s["norm_b"]
+            state.clip_score_final = s["final_norm"]
             state.clip_msg = self._clip_status(final_raw, 1, exhausted=False)
             state.log("CLIP重评（编辑后）", "完成", desc, score=final_raw)
         except Exception as e:
@@ -723,6 +696,27 @@ class PoetryAgent(_PoemRefineMixin, _ImageEditMixin):
                       word_count, CLIP_SPARSE_POEM_WEIGHT, CLIP_SPARSE_PROMPT_WEIGHT)
             return CLIP_SPARSE_POEM_WEIGHT, CLIP_SPARSE_PROMPT_WEIGHT
         return CLIP_POEM_WEIGHT, CLIP_PROMPT_WEIGHT
+
+    def _clip_dual_anchor(self, clip_eval, image, state: AgentState) -> dict:
+        """CLIP 双锚点纯计算（不写 state、不记日志）。
+
+        锚点 A=古诗视觉关键词，锚点 B=绘画提示词；无关键词时权重全给 B。
+        返回 {raw_a, raw_b, norm_a, norm_b, final_raw, final_norm, wa, wb}。
+        """
+        raw_b = clip_eval.score_raw_cosine(image, state.prompt)
+        norm_b = (raw_b + 1.0) / 2.0
+        if state.visual_keywords_en:
+            raw_a = clip_eval.score_raw_cosine(image, state.visual_keywords_en)
+            norm_a = (raw_a + 1.0) / 2.0
+            wa, wb = self._clip_anchor_weights(state.visual_keywords_en)
+            final_raw = wa * raw_a + wb * raw_b
+            final_norm = wa * norm_a + wb * norm_b
+        else:
+            raw_a = norm_a = 0.0
+            wa, wb = 0.0, 1.0
+            final_raw, final_norm = raw_b, norm_b
+        return {"raw_a": raw_a, "raw_b": raw_b, "norm_a": norm_a, "norm_b": norm_b,
+                "final_raw": final_raw, "final_norm": final_norm, "wa": wa, "wb": wb}
 
     @staticmethod
     def _raw_clip(state: AgentState) -> float:
