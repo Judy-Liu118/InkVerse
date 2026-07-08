@@ -13,7 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from core.agent.state import AgentState, Phase
 from core.logger import get_logger
-from config import PAIRWISE_EVOLUTION_ROUNDS
+from config import PAIRWISE_EVOLUTION_ROUNDS, DEFAULT_EDIT_MODEL
 
 _log = get_logger(__name__)
 
@@ -40,7 +40,7 @@ class AutonomousConfig:
     max_poem_refine_rounds:   int   = 1      # 改诗轮次（每轮改 top-N 首）
     refine_top_n:             int   = 2      # 每次改几首合格诗（1~5）
     image_improve_mode:       str   = "rewrite_regen"  # "rewrite_regen" | "edit_api"
-    edit_model:               str   = "wanx2.1-imageedit"
+    edit_model:               str   = DEFAULT_EDIT_MODEL
     # 自适应停止参数
     adaptive_stop:            bool  = True   # 是否启用自适应停止
     adaptive_stop_delta:      float = 0.01   # 连续无提升的 delta 阈值
@@ -260,7 +260,7 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
             state = agent.autonomous_improve_image(
                 state,
                 image_mode=config.image_improve_mode,
-                edit_model=getattr(config, "edit_model", "wanx2.1-imageedit"),
+                edit_model=getattr(config, "edit_model", DEFAULT_EDIT_MODEL),
                 edit_strength=decay_strength,
             )
             round_score = agent._raw_clip(state)

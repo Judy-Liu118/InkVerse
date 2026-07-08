@@ -5,6 +5,7 @@ from typing import Optional
 
 from core.agent.state import AgentState, Phase
 from core.logger import get_logger
+from config import DEFAULT_EDIT_MODEL
 
 _log = get_logger(__name__)
 
@@ -67,6 +68,31 @@ class _ImageEditMixin:
         if image_api_model:
             state.image_api_model = image_api_model
 
+        # ── 编辑 API 优先：指令编辑不需要 LLM 改写 Prompt（省 1 次调用），
+        #    且原 Prompt 保持不变，编辑后 CLIP 重评仍以原 Prompt 为锚点 ──
+        _edit_key = edit_api_key or state.image_api_key
+        if edit_model and state.image is not None and _edit_key:
+            try:
+                edited = self.image_gen.edit(
+                    image=state.image, instruction=feedback,
+                    edit_model=edit_model, strength=edit_strength, api_key=_edit_key,
+                )
+                state.image = edited
+                state.model_usage.image_gen += f" → 编辑({edit_model})"
+                state.log("图像编辑", f"百炼指令编辑({edit_model})", f"指令: {feedback[:60]}")
+                return self._phase_clip_only(state)
+            except Exception as e:
+                _log.exception("[图像编辑] 编辑 API 失败")
+                state.log("图像编辑", "⚠ 编辑 API 失败，自动降级",
+                          f"原因: {e}\n"
+                          f"将改写 Prompt（融入「{feedback[:40]}…」）后重新生图。"
+                          f"如对结果不满意可手动点「改写重生图」。")
+        elif edit_model and not _edit_key:
+            state.log("图像编辑", "⚠ 跳过编辑 API（无 API Key）",
+                      "DASHSCOPE_API_KEY 未配置，已自动降级为「改写重生图」"
+                      "（编辑意见已融入 Prompt）。")
+
+        # ── 降级/常规路径：LLM 改写 Prompt 后重新生图 ──
         original_prompt = state.prompt or ""
         user_req_note = f"\nUser request (context only): {state.user_input}" if state.user_input else ""
         msg = [
@@ -115,35 +141,13 @@ class _ImageEditMixin:
         except Exception as e:
             state.prompt = self._fallback_edit_prompt(original_prompt, feedback)
             state.log("改图规划", "规划异常，使用规则补全", str(e), model=model_desc)
-
-        _edit_key = edit_api_key or state.image_api_key
-        if edit_model and state.image is not None and _edit_key:
-            try:
-                edited = self.image_gen.edit(
-                    image=state.image, instruction=feedback,
-                    edit_model=edit_model, strength=edit_strength, api_key=_edit_key,
-                )
-                state.image = edited
-                state.model_usage.image_gen += f" → 编辑({edit_model})"
-                state.log("图像编辑", f"百炼指令编辑({edit_model})", f"指令: {feedback[:60]}")
-                return self._phase_clip_only(state)
-            except Exception as e:
-                _log.exception("[图像编辑] 编辑 API 失败")
-                state.log("图像编辑", "⚠ 编辑 API 失败，自动降级",
-                          f"原因: {e}\n"
-                          f"已用改写后的 Prompt（融入「{feedback[:40]}…」）重新生图。"
-                          f"如对结果不满意可手动点「改写重生图」。")
-        elif edit_model and not _edit_key:
-            state.log("图像编辑", "⚠ 跳过编辑 API（无 API Key）",
-                      "DASHSCOPE_API_KEY 未配置，已自动降级为「改写重生图」"
-                      "（编辑意见已融入 Prompt）。")
         return self._phase_image_clip(state)
 
     def autonomous_improve_image(
         self, state: AgentState, planner_adapter=None,
         image_backend: str = None, image_api_key: Optional[str] = None,
         image_api_model: Optional[str] = None, image_mode: str = "rewrite_regen",
-        edit_model: str = "wanx2.1-imageedit", edit_api_key: Optional[str] = None,
+        edit_model: str = DEFAULT_EDIT_MODEL, edit_api_key: Optional[str] = None,
         edit_strength: float = 0.75,
     ) -> AgentState:
         adapter = planner_adapter or self.prompt_adapter or self.score_adapter

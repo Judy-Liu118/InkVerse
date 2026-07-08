@@ -13,6 +13,7 @@ from config import (
     API_TIMEOUT_SUBMIT, API_TIMEOUT_SYNC, API_TIMEOUT_POLL,
     API_TIMEOUT_DOWNLOAD, API_MAX_RETRIES,
     API_POLL_INTERVAL, API_POLL_MAX_WAIT,
+    DEFAULT_EDIT_MODEL,
 )
 
 _log = get_logger(__name__)
@@ -226,7 +227,7 @@ _EDIT_POLL_MAX_WAIT = 120
 class BailianImageEditAPI:
     """阿里百炼图像编辑 API 封装。"""
 
-    def __init__(self, api_key: str, model: str = "wanx2.1-imageedit"):
+    def __init__(self, api_key: str, model: str = DEFAULT_EDIT_MODEL):
         self.api_key = api_key
         self.model   = model
         if not api_key:

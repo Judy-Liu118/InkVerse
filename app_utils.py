@@ -14,7 +14,7 @@ from core.models.adapter import ModelAdapter
 from config import (
     DEEPSEEK_API_KEY, DASHSCOPE_API_KEY,
     LOCAL_LLM_AVAILABLE, LOCAL_LORA_AVAILABLE, LOCAL_IMAGE_AVAILABLE,
-    STYLE_MAP, get_style_suffix,
+    STYLE_MAP, get_style_suffix, DEFAULT_EDIT_MODEL,
 )
 
 # ── 路径常量 ──────────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ REFINE_POEM_MODEL_CHOICES = _API_MODEL_CHOICES
 _DEFAULT_POEM_MODEL = "local_lora" if LOCAL_LORA_AVAILABLE else "qwen-plus"
 
 # ── 图像后端选项 ───────────────────────────────────────────────────────────────
-IMAGE_EDIT_DEFAULT_MODEL = "qwen-image-edit-max"
+IMAGE_EDIT_DEFAULT_MODEL = DEFAULT_EDIT_MODEL
 
 IMAGE_EDIT_MODEL_CHOICES = [
     ("百炼 · qwen-image-edit-max（通义图像编辑 Max）",      "edit:qwen-image-edit-max"),

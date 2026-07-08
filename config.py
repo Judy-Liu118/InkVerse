@@ -60,6 +60,10 @@ MOONSHOT_API_KEY  = os.getenv("MOONSHOT_API_KEY", "")
 # ===== 图像后端配置 =====
 IMAGE_BACKEND   = "local"
 IMAGE_API_MODEL = "qwen-image-2.0-pro"
+# 图像编辑 API 默认模型（指令编辑，保留构图）。各层 edit 默认值的单一事实源：
+# AutonomousConfig / autonomous_improve_image / ImageGenerator.edit /
+# BailianImageEditAPI / app_utils 均引用此常量。
+DEFAULT_EDIT_MODEL = "qwen-image-edit-max"
 # 显存狂暴模式：True=全量权重新进显存（生图秒级，需>12GB显存）
 #               False=CPU Offload（省显存但生图慢数倍）
 GPU_BEAST_MODE = False

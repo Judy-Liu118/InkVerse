@@ -6,6 +6,7 @@ from core.models.manager import ModelManager
 from config import (
     IMAGE_WIDTH, IMAGE_HEIGHT, IMAGE_STEPS, IMAGE_GUIDANCE, NEGATIVE_PROMPT,
     DASHSCOPE_API_KEY, IMAGE_API_MODEL, LOCAL_IMAGE_AVAILABLE,
+    DEFAULT_EDIT_MODEL,
 )
 from core.logger import get_logger
 
@@ -71,7 +72,7 @@ class ImageGenerator:
 
     def edit(
         self, image: "Image.Image", instruction: str,
-        edit_model: str = "wanx2.1-imageedit", strength: float = 0.75,
+        edit_model: str = DEFAULT_EDIT_MODEL, strength: float = 0.75,
         api_key: str = None,
     ) -> "Image.Image":
         from core.image.api import BailianImageEditAPI
