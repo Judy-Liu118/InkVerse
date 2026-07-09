@@ -43,7 +43,12 @@ class _LoopBoundTool(AgentTool):
 
 
 class LoopEditImageTool(_LoopBoundTool):
-    """改图（带 mode 选择，封装 autonomous_improve_image）。"""
+    """改图（带 mode 选择，封装 autonomous_improve_image）。
+
+    edit_model 由 build_loop_registry 注入（来自 AutonomousConfig.edit_model），
+    保证 LLM 臂选 edit_api 时用的编辑模型与写死流程一致，而不是静默落到
+    autonomous_improve_image 的签名默认值。
+    """
     name = "edit_image"
     description = (
         "在不改诗的前提下改图。每次调用消耗 1 次改图预算。"
@@ -66,13 +71,18 @@ class LoopEditImageTool(_LoopBoundTool):
         "required": ["feedback"],
     }
 
+    def __init__(self, agent: "PoetryAgent", edit_model: Optional[str] = None) -> None:
+        super().__init__(agent)
+        self.edit_model = edit_model
+
     def execute(self, state, feedback: str = "", mode: str = "rewrite_regen", **kwargs):
         # autonomous_improve_image 内部会让 LLM 重新生成 feedback；
         # 把 controller 已经给出的 feedback 注入 image_edit_history，
         # 避免后续 round 提相同方向。
         if feedback and feedback not in state.image_edit_history:
             state.image_edit_history.append(feedback)
-        return self.agent.autonomous_improve_image(state, image_mode=mode)
+        extra = {"edit_model": self.edit_model} if self.edit_model else {}
+        return self.agent.autonomous_improve_image(state, image_mode=mode, **extra)
 
 
 class LoopRefinePoemAndRegenTool(_LoopBoundTool):
@@ -98,10 +108,16 @@ class LoopRefinePoemAndRegenTool(_LoopBoundTool):
         return self.agent.refine_poem_and_regen_image(state, feedback=feedback)
 
 
-def build_loop_registry(agent: "PoetryAgent") -> ToolRegistry:
-    """构造 LLM-driven 改图循环专用 registry。不影响默认 registry。"""
+def build_loop_registry(
+    agent: "PoetryAgent", edit_model: Optional[str] = None,
+) -> ToolRegistry:
+    """构造 LLM-driven 改图循环专用 registry。不影响默认 registry。
+
+    edit_model：edit_api 模式的编辑模型，调用方（autonomous_full_run）应传
+    config.edit_model；None 时沿用 autonomous_improve_image 的签名默认。
+    """
     registry = ToolRegistry()
-    registry.register(LoopEditImageTool(agent))
+    registry.register(LoopEditImageTool(agent, edit_model=edit_model))
     registry.register(LoopRefinePoemAndRegenTool(agent))
     return registry
 

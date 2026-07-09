@@ -140,14 +140,35 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
     state = agent._phase_reflect(state)
 
     best_score = agent._raw_clip(state)
-    best_state = agent._copy_state(state)
     state.log("自主模式", "生图完成",
               f"CLIP raw={best_score:.3f}（目标≥{target}），开始改图循环（如需要）")
     yield state
 
-    # ═════════════════════════════════════════════════════════════════════
-    # CLIP 门控：改图循环（写死流程 vs LLM-driven 控制器）
-    # ═════════════════════════════════════════════════════════════════════
+    yield from run_image_improve_loop(
+        agent, state, config, target=target, refine_adapter=_refine_adapter,
+    )
+
+
+def run_image_improve_loop(
+    agent, state: AgentState, config: AutonomousConfig = None,
+    *, target: float = None, refine_adapter=None,
+):
+    """CLIP 门控改图循环（写死流程 vs LLM-driven 控制器，生成器）。
+
+    从"已有图像 + 已完成 CLIP 评分"的 state 出发独立运行。
+    autonomous_full_run 与 eval 侧同基图 A/B 实验共用此函数，
+    保证实验测的就是生产循环本体而非复刻副本。
+    每轮 yield state；收尾把历史最优回写 state 并置 Phase.DONE。
+    """
+    if config is None:
+        config = AutonomousConfig()
+    if target is None:
+        target = config.target_clip_score
+    if refine_adapter is None:
+        refine_adapter = agent.score_adapter or agent.prompt_adapter
+
+    best_score = agent._raw_clip(state)
+    best_state = agent._copy_state(state)
     stale_count = 0       # 连续无提升计数器（自适应停止）
     prev_round_score = None  # 上一轮分数，None 表示首轮（不计入 stale）
 
@@ -155,13 +176,15 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
         # LLM-driven：每轮把 state + tool schema 喂 LLM，由它决定调
         # edit_image / refine_poem_and_regen / stop（real ToolRegistry dispatch）
         from core.agent.controller import ImageLoopController, build_loop_registry
-        _controller_adapter = _refine_adapter or agent.prompt_adapter or agent.score_adapter
+        _controller_adapter = refine_adapter or agent.prompt_adapter or agent.score_adapter
         if _controller_adapter is None:
             state.log("自主模式", "⚠ LLM-driven 循环跳过",
                       "未配置 LLM 评分/规划 adapter，无法运行 controller，回退到原写死流程")
             config.image_loop_llm_driven = False  # 本次运行降级
         else:
-            loop_registry = build_loop_registry(agent)
+            loop_registry = build_loop_registry(
+                agent, edit_model=getattr(config, "edit_model", DEFAULT_EDIT_MODEL),
+            )
             controller = ImageLoopController(
                 adapter=_controller_adapter, registry=loop_registry,
             )
@@ -198,6 +221,7 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
                 decision_record = {
                     "round": img_round + 1,
                     "tool": tool_name,
+                    "mode": decision.get("mode"),   # edit_image 的 rewrite_regen/edit_api
                     "is_fallback": bool(decision.get("_fallback")),
                     "score_before": prev_round_score,
                     "score_after": None,
