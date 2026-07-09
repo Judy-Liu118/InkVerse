@@ -35,12 +35,21 @@ CLIP 终值与 VLM 硬约束兑现率是否更优。
 7. 判读口径预定死：n≤27、single-shot、不称 ceiling/上限；不做显著性宣称
    （只报配对描述统计与方向）；结果无论正负如实入报告。
 ═══════════════════════════════════════════════════════════════════════════════════
+
+记录增强（2026-07-09 冒烟 t01 之后追加）：仅新增审计字段与日志镜像，不改任何
+实验条件 / 流程 / 指标口径：
+  · shared 增记诗总分 / 艺术分 / selection_mode 与候选池全量明细（每首含小分）；
+  · 两臂增记每轮中间图（images/tNN_{fixed|llm}_rK.png）与每轮双锚点 raw 分；
+  · 终端输出（print + logging + 三方库）全量镜像到 run 目录 logs/run_*.log。
+  t01 先于本增强完成，缺上述新字段（其余字段口径一致）。
 """
 from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
+import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -160,6 +169,59 @@ class QuotaMeter:
                 and self.edit_budget - self.edit_used >= WORST_EDIT_PER_THEME)
 
 
+class _Tee:
+    """stdout/stderr 双写：终端照常显示，同时镜像到 run 日志（审计：终端可见即落盘）。"""
+
+    def __init__(self, primary, mirror):
+        self._primary, self._mirror = primary, mirror
+
+    def write(self, data):
+        try:
+            self._primary.write(data)
+        except UnicodeEncodeError:
+            # 终端编码非 UTF-8（如 GBK console）时降级替换，不让日志镜像拖垮主流程
+            enc = getattr(self._primary, "encoding", None) or "utf-8"
+            self._primary.write(data.encode(enc, errors="replace").decode(enc))
+        try:
+            self._mirror.write(data)
+        except Exception:
+            pass
+
+    def flush(self):
+        self._primary.flush()
+        try:
+            self._mirror.flush()
+        except Exception:
+            pass
+
+    def isatty(self):
+        return getattr(self._primary, "isatty", lambda: False)()
+
+    def fileno(self):
+        return self._primary.fileno()
+
+    @property
+    def encoding(self):
+        return getattr(self._primary, "encoding", "utf-8")
+
+
+def _attach_run_log(log_path: Path):
+    """终端输出全量镜像到 run 目录日志。
+
+    print / 三方库输出走 sys.stdout|stderr 的 Tee；inkverse logging 的控制台
+    handler 绑的是替换前的原始 stdout（不经 Tee），故另挂一个 DEBUG 级
+    StreamHandler 写同一文件，时间序自然交错。
+    """
+    f = open(log_path, "a", encoding="utf-8", errors="replace", buffering=1)
+    sys.stdout = _Tee(sys.stdout, f)
+    sys.stderr = _Tee(sys.stderr, f)
+    fh = logging.StreamHandler(f)
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(logging.Formatter(
+        "%(asctime)s [%(levelname)-5s] %(name)s | %(message)s", datefmt="%H:%M:%S"))
+    logging.getLogger("inkverse").addHandler(fh)
+
+
 def _make_adapter(model_choice: str, allow_lora_fallback: bool = False) -> ModelAdapter:
     if model_choice == "local_lora":
         return ModelAdapter(backend="local_lora", allow_lora_fallback=allow_lora_fallback)
@@ -213,8 +275,14 @@ def _extract_round_scores(final_state: AgentState, base_trace_len: int) -> List[
     return scores
 
 
+def _raw_anchor(norm: float) -> Optional[float]:
+    """归一化锚点分（0~1）还原为 CLIP raw 余弦（与 agent._raw_clip 同口径）。"""
+    return round(norm * 2 - 1, 3) if norm else None
+
+
 def _run_arm(agent: PoetryAgent, base_state: AgentState, *,
-             llm_driven: bool, args, meter: QuotaMeter) -> Dict[str, Any]:
+             llm_driven: bool, args, meter: QuotaMeter,
+             img_dir: Path, idx: int, arm_name: str) -> Dict[str, Any]:
     state = agent._copy_state(base_state)
     state.llm_loop_decisions = []   # _copy_state 浅拷贝不含此字段，显式断开共享
     base_trace_len = len(state.trace)
@@ -229,16 +297,31 @@ def _run_arm(agent: PoetryAgent, base_state: AgentState, *,
     g0, e0 = meter.gen_used, meter.edit_used
     t0 = time.time()
     final = state
+    rounds: List[Dict[str, Any]] = []   # 每轮审计：中间图 + 双锚点 raw（记录增强）
     for s in run_image_improve_loop(agent, state, config, target=args.target):
         final = s
+        n = len(_extract_round_scores(s, base_trace_len))
+        # 只在"新一轮完成"的 yield 上存图；LLM stop 的 yield 与收尾 yield
+        # （历史最优回写，同 final_image）都不新增轮次，自然跳过。
+        if n > len(rounds) and s.image is not None:
+            rounds.append({
+                "round":           n,
+                "clip_raw":        agent._raw_clip(s),
+                "clip_raw_poem":   _raw_anchor(s.clip_score_poem),
+                "clip_raw_prompt": _raw_anchor(s.clip_score_prompt),
+                "image": _save_image(
+                    s.image, img_dir / f"t{idx:02d}_{arm_name}_r{n}.png"),
+            })
     out: Dict[str, Any] = {
         "clip_raw_base":  agent._raw_clip(base_state),
         "clip_raw_final": agent._raw_clip(final),
         "round_scores":   _extract_round_scores(final, base_trace_len),
+        "rounds":         rounds,
         "gen_used":       meter.gen_used - g0,
         "edit_used":      meter.edit_used - e0,
         "elapsed_sec":    round(time.time() - t0, 1),
         "poem_final":     final.poem,
+        "poem_score_final": final.best_poem_score,  # LLM 臂改诗后会变，写死臂恒等于基线
     }
     if llm_driven:
         out["decisions"] = list(final.llm_loop_decisions)
@@ -392,6 +475,10 @@ def main():
 
     run_dir = Path(args.run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
+    run_log = run_dir / "logs" / f"run_{time.strftime('%Y%m%d_%H%M%S')}.log"
+    run_log.parent.mkdir(parents=True, exist_ok=True)
+    _attach_run_log(run_log)
+    print(f"[llm_loop_ab] 运行日志（终端全量镜像）: {run_log}")
     jsonl_path = run_dir / "results.jsonl"
     done, gen_used0, edit_used0 = (_load_previous(jsonl_path) if args.resume
                                    else (set(), 0, 0))
@@ -441,14 +528,30 @@ def main():
                 img_dir = run_dir / "images"
                 rec["shared"] = {
                     "poem": base.poem, "title": base.title,
+                    "poem_score": {
+                        "total":          base.best_poem_score,
+                        "art_quality":    base.best_poem_art_quality,
+                        "selection_mode": base.poem_selection_mode,
+                    },
+                    # 候选池全量明细（每首含小分 dict），供审计生成-筛选过程
+                    "poem_candidates": {
+                        "qualified": base.qualified_candidates,
+                        "rejected":  base.rejected_candidates,
+                    },
                     "prompt": base.prompt,
                     "visual_keywords_en": base.visual_keywords_en,
                     "clip_raw_base": agent._raw_clip(base),
+                    "clip_raw_poem":   _raw_anchor(base.clip_score_poem),
+                    "clip_raw_prompt": _raw_anchor(base.clip_score_prompt),
                     "base_image": _save_image(base.image, img_dir / f"t{idx:02d}_base.png"),
                 }
                 # 两臂固定顺序：先写死后 LLM（预登记条款 5）
-                arm_fixed = _run_arm(agent, base, llm_driven=False, args=args, meter=meter)
-                arm_llm   = _run_arm(agent, base, llm_driven=True,  args=args, meter=meter)
+                arm_fixed = _run_arm(agent, base, llm_driven=False, args=args,
+                                     meter=meter, img_dir=img_dir, idx=idx,
+                                     arm_name="fixed")
+                arm_llm   = _run_arm(agent, base, llm_driven=True,  args=args,
+                                     meter=meter, img_dir=img_dir, idx=idx,
+                                     arm_name="llm")
                 arm_fixed["final_image"] = _save_image(
                     arm_fixed.pop("_image"), img_dir / f"t{idx:02d}_fixed.png")
                 arm_llm["final_image"] = _save_image(
