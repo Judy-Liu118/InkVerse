@@ -1,0 +1,475 @@
+[llm_loop_ab] 运行日志（终端全量镜像）: eval\runs\llm_loop_ab\logs\run_20260709_234214.log
+[llm_loop_ab] 计划 27 题 · 已完成 0 · 本次 1
+[llm_loop_ab] gen=qwen-image-2.0-pro-2026-06-22（预算 100，已用 0） · edit=qwen-image-edit-max-2026-01-16（预算 100，已用 0） · CLIP_MAX_RETRIES=0
+23:42:14 [INFO ] inkverse.core.models.adapter | 后端=local_lora（本地微调模型）
+23:42:14 [INFO ] inkverse.core.models.adapter | 后端=qwen | 模型=qwen-plus
+23:42:14 [INFO ] inkverse.core.models.adapter | 后端=qwen | 模型=qwen-plus
+23:42:14 [INFO ] inkverse.core.models.adapter | 后端=qwen | 模型=qwen-max
+  [01/27] 写一首春景的五言绝句，要有柳树和燕子
+23:42:18 [INFO ] inkverse.agent | [任务规划] 轻量意图解析（本地提取关键参数）: 用户要求：写一首春景的五言绝句，要有柳树和燕子
+23:42:18 [INFO ] inkverse.agent | [古诗生成] 开始生成候选（品质筛选模式） (Qwen2.5-1.5B+LoRA（本地微调）): 用户要求: 写一首春景的五言绝句，要有柳树和燕子
+23:42:19 [INFO ] inkverse.core.poem.generator | 使用本地微调模型 (LoRA)
+23:42:19 [INFO ] inkverse.core.models.manager | >>> 开始从本地加载微调模型 (古诗生成)...
+🦥 Unsloth: Will patch your computer to enable 2x faster free finetuning.
+W0709 23:42:40.266000 7356 site-packages\torch\distributed\elastic\multiprocessing\redirects.py:29] NOTE: Redirects are currently not supported in Windows or MacOs.
+Unsloth: Your Flash Attention 2 installation seems to be broken. Using Xformers instead. No performance changes will be seen.
+🦥 Unsloth Zoo will now patch everything to make training faster!
+==((====))==  Unsloth 2026.5.2: Fast Qwen2 patching. Transformers: 5.5.0.
+   \\   /|    NVIDIA GeForce RTX 5070 Laptop GPU. Num GPUs = 1. Max memory: 7.96 GB. Platform: Windows.
+O^O/ \_/ \    Torch: 2.10.0+cu130. CUDA: 12.0. CUDA Toolkit: 13.0. Triton: 3.6.0
+\        /    Bfloat16 = TRUE. FA [Xformers = None. FA2 = False]
+ "-____-"     Free license: http://github.com/unslothai/unsloth
+Unsloth: Fast downloading is enabled - ignore downloading bars which are red colored!
+Loading weights:   0%|                                                                         | 0/338 [00:00<?, ?it/s]Loading weights:   0%|▏                                                                | 1/338 [00:00<01:28,  3.81it/s]Loading weights:   5%|███                                                             | 16/338 [00:00<00:05, 54.98it/s]Loading weights:  15%|█████████▌                                                     | 51/338 [00:00<00:01, 150.85it/s]Loading weights:  26%|████████████████▏                                              | 87/338 [00:00<00:01, 212.94it/s]Loading weights:  36%|██████████████████████▌                                       | 123/338 [00:00<00:00, 256.72it/s]Loading weights:  47%|█████████████████████████████▏                                | 159/338 [00:00<00:00, 286.36it/s]Loading weights:  58%|███████████████████████████████████▊                          | 195/338 [00:00<00:00, 306.78it/s]Loading weights:  68%|██████████████████████████████████████████▎                   | 231/338 [00:00<00:00, 321.79it/s]Loading weights:  79%|████████████████████████████████████████████████▉             | 267/338 [00:01<00:00, 331.24it/s]Loading weights:  90%|███████████████████████████████████████████████████████▌      | 303/338 [00:01<00:00, 337.62it/s]Loading weights: 100%|██████████████████████████████████████████████████████████████| 338/338 [00:01<00:00, 263.19it/s]
+23:43:00 [INFO ] inkverse.core.models.manager | <<< 微调模型加载成功，已进入显存。
+[inkverse.core.models.manager|INFO]<<< 微调模型加载成功，已进入显存。
+23:43:00 [INFO ] inkverse.core.poem.generator | ======================================================================
+[inkverse.core.poem.generator|INFO]======================================================================
+23:43:00 [INFO ] inkverse.core.poem.generator | 第 1/3 轮生成 (5 首候选)
+[inkverse.core.poem.generator|INFO]第 1/3 轮生成 (5 首候选)
+23:43:00 [DEBUG] inkverse.core.poem.generator | 本地 prompt（mode=full, 候选 1）:
+请根据以下要求创作一首中国古典诗词，严格按照格律，每句5字，共4句。不要输出任何解释，只输出诗句，每句换行。
+
+要求：写一首春景的五言绝句，要有柳树和燕子
+
+[inkverse.core.poem.generator|DEBUG]本地 prompt（mode=full, 候选 1）:
+请根据以下要求创作一首中国古典诗词，严格按照格律，每句5字，共4句。不要输出任何解释，只输出诗句，每句换行。
+
+要求：写一首春景的五言绝句，要有柳树和燕子
+
+23:43:03 [INFO ] inkverse.core.poem.generator | 候选诗 1 生成成功
+[inkverse.core.poem.generator|INFO]候选诗 1 生成成功
+23:43:03 [DEBUG] inkverse.core.poem.generator | 本地 prompt（mode=full, 候选 2）:
+请根据以下要求创作一首中国古典诗词，严格按照格律，每句5字，共4句。不要输出任何解释，只输出诗句，每句换行。
+
+要求：写一首春景的五言绝句，要有柳树和燕子
+
+[inkverse.core.poem.generator|DEBUG]本地 prompt（mode=full, 候选 2）:
+请根据以下要求创作一首中国古典诗词，严格按照格律，每句5字，共4句。不要输出任何解释，只输出诗句，每句换行。
+
+要求：写一首春景的五言绝句，要有柳树和燕子
+
+23:43:05 [INFO ] inkverse.core.poem.generator | 候选诗 2 生成成功
+[inkverse.core.poem.generator|INFO]候选诗 2 生成成功
+23:43:05 [DEBUG] inkverse.core.poem.generator | 本地 prompt（mode=full, 候选 3）:
+请根据以下要求创作一首中国古典诗词，严格按照格律，每句5字，共4句。不要输出任何解释，只输出诗句，每句换行。
+
+要求：写一首春景的五言绝句，要有柳树和燕子
+
+[inkverse.core.poem.generator|DEBUG]本地 prompt（mode=full, 候选 3）:
+请根据以下要求创作一首中国古典诗词，严格按照格律，每句5字，共4句。不要输出任何解释，只输出诗句，每句换行。
+
+要求：写一首春景的五言绝句，要有柳树和燕子
+
+23:43:06 [INFO ] inkverse.core.poem.generator | 候选诗 3 生成成功
+[inkverse.core.poem.generator|INFO]候选诗 3 生成成功
+23:43:06 [DEBUG] inkverse.core.poem.generator | 本地 prompt（mode=full, 候选 4）:
+请根据以下要求创作一首中国古典诗词，严格按照格律，每句5字，共4句。不要输出任何解释，只输出诗句，每句换行。
+
+要求：写一首春景的五言绝句，要有柳树和燕子
+
+[inkverse.core.poem.generator|DEBUG]本地 prompt（mode=full, 候选 4）:
+请根据以下要求创作一首中国古典诗词，严格按照格律，每句5字，共4句。不要输出任何解释，只输出诗句，每句换行。
+
+要求：写一首春景的五言绝句，要有柳树和燕子
+
+23:43:07 [INFO ] inkverse.core.poem.generator | 候选诗 4 生成成功
+[inkverse.core.poem.generator|INFO]候选诗 4 生成成功
+23:43:07 [DEBUG] inkverse.core.poem.generator | 本地 prompt（mode=full, 候选 5）:
+请根据以下要求创作一首中国古典诗词，严格按照格律，每句5字，共4句。不要输出任何解释，只输出诗句，每句换行。
+
+要求：写一首春景的五言绝句，要有柳树和燕子
+
+[inkverse.core.poem.generator|DEBUG]本地 prompt（mode=full, 候选 5）:
+请根据以下要求创作一首中国古典诗词，严格按照格律，每句5字，共4句。不要输出任何解释，只输出诗句，每句换行。
+
+要求：写一首春景的五言绝句，要有柳树和燕子
+
+23:43:08 [INFO ] inkverse.core.poem.generator | 候选诗 5 生成成功
+[inkverse.core.poem.generator|INFO]候选诗 5 生成成功
+23:43:08 [INFO ] inkverse.core.poem.generator | 开始评分... (共 5 首候选)
+[inkverse.core.poem.generator|INFO]开始评分... (共 5 首候选)
+23:43:10 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-plus
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-plus
+23:43:10 [DEBUG] inkverse.core.poem.scorer | LLM-API 原始返回: 主题匹配度:3,意象完整性:3,意境连贯度:1.5,语言优美度:1.5,总分:9
+[inkverse.core.poem.scorer|DEBUG]LLM-API 原始返回: 主题匹配度:3,意象完整性:3,意境连贯度:1.5,语言优美度:1.5,总分:9
+23:43:10 [DEBUG] inkverse.core.poem.scorer | LLM-API 4维: intent=1.00 imagery=1.00 cohesion=0.75 aesthetics=0.75
+[inkverse.core.poem.scorer|DEBUG]LLM-API 4维: intent=1.00 imagery=1.00 cohesion=0.75 aesthetics=0.75
+23:43:10 [INFO ] inkverse.core.poem.scorer | [候选4] [必须意象] ✓ 要求含'柳树'（同义词命中'柳'） 已满足
+[inkverse.core.poem.scorer|INFO][候选4] [必须意象] ✓ 要求含'柳树'（同义词命中'柳'） 已满足
+23:43:10 [INFO ] inkverse.core.poem.scorer | [候选4] [必须意象] ✓ 要求含'燕子'（同义词命中'燕'） 已满足
+[inkverse.core.poem.scorer|INFO][候选4] [必须意象] ✓ 要求含'燕子'（同义词命中'燕'） 已满足
+23:43:11 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-plus
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-plus
+23:43:11 [DEBUG] inkverse.core.poem.scorer | LLM-API 原始返回: 主题匹配度:2.5,意象完整性:1.5,意境连贯度:1.5,语言优美度:1.5,总分:7
+[inkverse.core.poem.scorer|DEBUG]LLM-API 原始返回: 主题匹配度:2.5,意象完整性:1.5,意境连贯度:1.5,语言优美度:1.5,总分:7
+23:43:11 [DEBUG] inkverse.core.poem.scorer | LLM-API 4维: intent=0.83 imagery=0.50 cohesion=0.75 aesthetics=0.75
+[inkverse.core.poem.scorer|DEBUG]LLM-API 4维: intent=0.83 imagery=0.50 cohesion=0.75 aesthetics=0.75
+23:43:11 [INFO ] inkverse.core.poem.scorer | [候选2] [必须意象] ✓ 要求含'柳树'（同义词命中'柳'） 已满足
+[inkverse.core.poem.scorer|INFO][候选2] [必须意象] ✓ 要求含'柳树'（同义词命中'柳'） 已满足
+23:43:11 [INFO ] inkverse.core.poem.scorer | [候选2] [必须意象] ⚠ 要求含'燕子'及同义词(燕,归燕,舞燕,燕子,紫燕,雏燕)均未出现 → ×0.75
+[inkverse.core.poem.scorer|INFO][候选2] [必须意象] ⚠ 要求含'燕子'及同义词(燕,归燕,舞燕,燕子,紫燕,雏燕)均未出现 → ×0.75
+23:43:11 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-plus
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-plus
+23:43:11 [DEBUG] inkverse.core.poem.scorer | LLM-API 原始返回: 主题匹配度:2.5,意象完整性:2.5,意境连贯度:1.5,语言优美度:1.5,总分:8.0
+[inkverse.core.poem.scorer|DEBUG]LLM-API 原始返回: 主题匹配度:2.5,意象完整性:2.5,意境连贯度:1.5,语言优美度:1.5,总分:8.0
+23:43:11 [DEBUG] inkverse.core.poem.scorer | LLM-API 4维: intent=0.83 imagery=0.83 cohesion=0.75 aesthetics=0.75
+[inkverse.core.poem.scorer|DEBUG]LLM-API 4维: intent=0.83 imagery=0.83 cohesion=0.75 aesthetics=0.75
+23:43:11 [INFO ] inkverse.core.poem.scorer | [候选3] [必须意象] ✓ 要求含'柳树'（同义词命中'柳条'） 已满足
+[inkverse.core.poem.scorer|INFO][候选3] [必须意象] ✓ 要求含'柳树'（同义词命中'柳条'） 已满足
+23:43:11 [INFO ] inkverse.core.poem.scorer | [候选3] [必须意象] ✓ 要求含'燕子'（同义词命中'燕'） 已满足
+[inkverse.core.poem.scorer|INFO][候选3] [必须意象] ✓ 要求含'燕子'（同义词命中'燕'） 已满足
+23:43:11 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-plus
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-plus
+23:43:11 [DEBUG] inkverse.core.poem.scorer | LLM-API 原始返回: 主题匹配度:3,意象完整性:3,意境连贯度:1.5,语言优美度:2,总分:9.5
+[inkverse.core.poem.scorer|DEBUG]LLM-API 原始返回: 主题匹配度:3,意象完整性:3,意境连贯度:1.5,语言优美度:2,总分:9.5
+23:43:11 [DEBUG] inkverse.core.poem.scorer | LLM-API 4维: intent=1.00 imagery=1.00 cohesion=0.75 aesthetics=1.00
+[inkverse.core.poem.scorer|DEBUG]LLM-API 4维: intent=1.00 imagery=1.00 cohesion=0.75 aesthetics=1.00
+23:43:11 [INFO ] inkverse.core.poem.scorer | [候选5] [必须意象] ✓ 要求含'柳树'（同义词命中'柳'） 已满足
+[inkverse.core.poem.scorer|INFO][候选5] [必须意象] ✓ 要求含'柳树'（同义词命中'柳'） 已满足
+23:43:11 [INFO ] inkverse.core.poem.scorer | [候选5] [必须意象] ✓ 要求含'燕子'（同义词命中'燕'） 已满足
+[inkverse.core.poem.scorer|INFO][候选5] [必须意象] ✓ 要求含'燕子'（同义词命中'燕'） 已满足
+23:43:13 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-plus
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-plus
+23:43:13 [DEBUG] inkverse.core.poem.scorer | LLM-API 原始返回: 主题匹配度:2.5,意象完整性:1.5,意境连贯度:1.5,语言优美度:1.5,总分:7.0
+[inkverse.core.poem.scorer|DEBUG]LLM-API 原始返回: 主题匹配度:2.5,意象完整性:1.5,意境连贯度:1.5,语言优美度:1.5,总分:7.0
+23:43:13 [DEBUG] inkverse.core.poem.scorer | LLM-API 4维: intent=0.83 imagery=0.50 cohesion=0.75 aesthetics=0.75
+[inkverse.core.poem.scorer|DEBUG]LLM-API 4维: intent=0.83 imagery=0.50 cohesion=0.75 aesthetics=0.75
+23:43:13 [INFO ] inkverse.core.poem.scorer | [候选1] [必须意象] ✓ 要求含'柳树'（同义词命中'柳'） 已满足
+[inkverse.core.poem.scorer|INFO][候选1] [必须意象] ✓ 要求含'柳树'（同义词命中'柳'） 已满足
+23:43:13 [INFO ] inkverse.core.poem.scorer | [候选1] [必须意象] ⚠ 要求含'燕子'及同义词(燕,归燕,舞燕,燕子,紫燕,雏燕)均未出现 → ×0.75
+[inkverse.core.poem.scorer|INFO][候选1] [必须意象] ⚠ 要求含'燕子'及同义词(燕,归燕,舞燕,燕子,紫燕,雏燕)均未出现 → ×0.75
+23:43:13 [INFO ] inkverse.core.poem.generator | ----------------------------------------------------------------------
+[inkverse.core.poem.generator|INFO]----------------------------------------------------------------------
+23:43:13 [INFO ] inkverse.core.poem.generator | 【合格 ✓ 总分=0.887】雨歇春阴起 | 风摇日影斜 | 柳条垂绿岸 | 燕子占黄花
+[inkverse.core.poem.generator|INFO]【合格 ✓ 总分=0.887】雨歇春阴起 | 风摇日影斜 | 柳条垂绿岸 | 燕子占黄花
+23:43:13 [INFO ] inkverse.core.poem.generator | 【合格 ✓ 总分=0.778】风起落花时 | 池塘生春意 | 柳絮如雪飞 | 燕来寻旧主
+[inkverse.core.poem.generator|INFO]【合格 ✓ 总分=0.778】风起落花时 | 池塘生春意 | 柳絮如雪飞 | 燕来寻旧主
+23:43:13 [INFO ] inkverse.core.poem.generator | 【合格 ✓ 总分=0.903】花底日初长 | 枝间雨乍晴 | 柳绵犹点水 | 燕子不成泥
+[inkverse.core.poem.generator|INFO]【合格 ✓ 总分=0.903】花底日初长 | 枝间雨乍晴 | 柳绵犹点水 | 燕子不成泥
+23:43:13 [INFO ] inkverse.core.poem.generator | 【废弃 ✗ 总分=0.628】绿杨连碧草 | 花发柳阴中 | 不似江南好 | 风轻蝶自同
+[inkverse.core.poem.generator|INFO]【废弃 ✗ 总分=0.628】绿杨连碧草 | 花发柳阴中 | 不似江南好 | 风轻蝶自同
+23:43:13 [INFO ] inkverse.core.poem.generator | 【废弃 ✗ 总分=0.628】柳带烟深碧 | 花如雪乱红 | 池塘风日好 | 正是画工宫
+[inkverse.core.poem.generator|INFO]【废弃 ✗ 总分=0.628】柳带烟深碧 | 花如雪乱红 | 池塘风日好 | 正是画工宫
+23:43:13 [INFO ] inkverse.core.poem.generator | 本轮: 3 首合格, 2 首废弃 | 累计合格池: 3 首（需 ≥ 3）
+[inkverse.core.poem.generator|INFO]本轮: 3 首合格, 2 首废弃 | 累计合格池: 3 首（需 ≥ 3）
+23:43:13 [INFO ] inkverse.core.poem.generator | ✓ 合格池已达 3 首（要求 ≥ 3），停止补充生成
+[inkverse.core.poem.generator|INFO]✓ 合格池已达 3 首（要求 ≥ 3），停止补充生成
+23:43:13 [INFO ] inkverse.core.poem.generator | ######################################################################
+[inkverse.core.poem.generator|INFO]######################################################################
+23:43:13 [INFO ] inkverse.core.poem.generator | 最优候选 总分: 0.903
+[inkverse.core.poem.generator|INFO]最优候选 总分: 0.903
+23:43:13 [INFO ] inkverse.core.poem.generator |   意图=1.000 [LLM=1.000] | 平仄=1.000 | 押韵=0.600 | 意象=1.000 | 聚合=0.750
+[inkverse.core.poem.generator|INFO]  意图=1.000 [LLM=1.000] | 平仄=1.000 | 押韵=0.600 | 意象=1.000 | 聚合=0.750
+23:43:13 [INFO ] inkverse.core.poem.generator |   重复惩罚=1.000 | 必须意象系数=1.000 | 艺术品质=0.903 | 原始=0.903
+[inkverse.core.poem.generator|INFO]  重复惩罚=1.000 | 必须意象系数=1.000 | 艺术品质=0.903 | 原始=0.903
+23:43:13 [INFO ] inkverse.core.poem.generator |     花底日初长
+[inkverse.core.poem.generator|INFO]    花底日初长
+23:43:13 [INFO ] inkverse.core.poem.generator |     枝间雨乍晴
+[inkverse.core.poem.generator|INFO]    枝间雨乍晴
+23:43:13 [INFO ] inkverse.core.poem.generator |     柳绵犹点水
+[inkverse.core.poem.generator|INFO]    柳绵犹点水
+23:43:13 [INFO ] inkverse.core.poem.generator |     燕子不成泥
+[inkverse.core.poem.generator|INFO]    燕子不成泥
+23:43:13 [INFO ] inkverse.core.poem.generator | ######################################################################
+[inkverse.core.poem.generator|INFO]######################################################################
+23:43:13 [INFO ] inkverse.agent | [古诗生成] 体裁: 五言绝句，品质筛选完成（合格 3 + 废弃 2，模式=qualified_only，最优候选得分=0.903） (Qwen2.5-1.5B+LoRA（本地微调）): 花底日初长
+枝间雨乍晴
+柳绵犹点水
+燕子不成泥
+[inkverse.agent|INFO][古诗生成] 体裁: 五言绝句，品质筛选完成（合格 3 + 废弃 2，模式=qualified_only，最优候选得分=0.903） (Qwen2.5-1.5B+LoRA（本地微调）): 花底日初长
+枝间雨乍晴
+柳绵犹点水
+燕子不成泥
+23:43:16 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-plus
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-plus
+23:43:16 [INFO ] inkverse.agent | [视觉关键词提取] 从古诗提取 CLIP 锚点（诗-图直连） (qwen-plus（qwen）): flowers beneath, lengthening daylight, branches between, sudden clear rain, willow catkins touching water, swallows failing to make mud
+[inkverse.agent|INFO][视觉关键词提取] 从古诗提取 CLIP 锚点（诗-图直连） (qwen-plus（qwen）): flowers beneath, lengthening daylight, branches between, sudden clear rain, willow catkins touching water, swallows failing to make mud
+23:43:17 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-plus
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-plus
+23:43:17 [INFO ] inkverse.agent | [诗名生成] 尝试 1 (qwen-plus（qwen）): 春柳燕语
+[inkverse.agent|INFO][诗名生成] 尝试 1 (qwen-plus（qwen）): 春柳燕语
+23:43:17 [INFO ] inkverse.core.image.prompt | 使用的后端: qwen, 语言: 英文
+[inkverse.core.image.prompt|INFO]使用的后端: qwen, 语言: 英文
+23:43:23 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-max
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-max
+23:43:23 [INFO ] inkverse.core.image.prompt | 生成成功，长度=443 字符
+[inkverse.core.image.prompt|INFO]生成成功，长度=443 字符
+23:43:23 [INFO ] inkverse.agent | [提示词生成] 成功 (qwen-max（qwen）): Chinese ink wash painting, sumi-e, monochrome, minimalist, Song Dynasty style
+Subject: willow fluff, swallows
+Environmen
+[inkverse.agent|INFO][提示词生成] 成功 (qwen-max（qwen）): Chinese ink wash painting, sumi-e, monochrome, minimalist, Song Dynasty style
+Subject: willow fluff, swallows
+Environmen
+23:43:26 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-max
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-max
+23:43:26 [INFO ] inkverse.agent | [提示词自检] 通过 (qwen-max（qwen）): KEEP
+The prompt is faithful to the title, poem, and visual anchors, depicting only supported visual elements.
+[inkverse.agent|INFO][提示词自检] 通过 (qwen-max（qwen）): KEEP
+The prompt is faithful to the title, poem, and visual anchors, depicting only supported visual elements.
+23:43:26 [INFO ] inkverse.core.agent.agent | [CLIP] 评估器初始化完成（单例）
+[inkverse.core.agent.agent|INFO][CLIP] 评估器初始化完成（单例）
+23:43:26 [INFO ] inkverse.core.evaluation.clip | 加载 CLIP 模型中…
+[inkverse.core.evaluation.clip|INFO]加载 CLIP 模型中…
+Loading weights:   0%|                                                                         | 0/398 [00:00<?, ?it/s]Loading weights: 100%|█████████████████████████████████████████████████████████████| 398/398 [00:00<00:00, 9045.47it/s]
+23:43:26 [INFO ] inkverse.core.evaluation.clip | CLIP 加载完成
+[inkverse.core.evaluation.clip|INFO]CLIP 加载完成
+23:43:44 [DEBUG] inkverse.core.evaluation.clip | 文本-文本余弦相似度=0.6982
+[inkverse.core.evaluation.clip|DEBUG]文本-文本余弦相似度=0.6982
+23:43:44 [DEBUG] inkverse.core.agent.agent | [提示词匹配] ✓ 诗-提示词语义一致性正常 raw=0.6982 | 归一化=0.849
+[inkverse.core.agent.agent|DEBUG][提示词匹配] ✓ 诗-提示词语义一致性正常 raw=0.6982 | 归一化=0.849
+23:43:44 [INFO ] inkverse.agent | [图像生成] 尝试 1/1 (bailian/qwen-image-2.0-pro-2026-06-22): backend=bailian
+[inkverse.agent|INFO][图像生成] 尝试 1/1 (bailian/qwen-image-2.0-pro-2026-06-22): backend=bailian
+23:43:44 [INFO ] inkverse.core.image.generator | 调用百炼 API: model=qwen-image-2.0-pro-2026-06-22
+[inkverse.core.image.generator|INFO]调用百炼 API: model=qwen-image-2.0-pro-2026-06-22
+23:43:44 [INFO ] inkverse.core.image.api | 调用同步多模态生图接口 (qwen-image-2.0-pro-2026-06-22, 1024*1024)
+[inkverse.core.image.api|INFO]调用同步多模态生图接口 (qwen-image-2.0-pro-2026-06-22, 1024*1024)
+23:44:48 [DEBUG] inkverse.core.image.api | 正在下载图像…
+[inkverse.core.image.api|DEBUG]正在下载图像…
+23:44:51 [DEBUG] inkverse.core.image.api | 图像下载完成，尺寸=(1024, 1024)
+[inkverse.core.image.api|DEBUG]图像下载完成，尺寸=(1024, 1024)
+23:44:51 [DEBUG] inkverse.core.evaluation.clip | 余弦相似度=0.3003 → 归一化分数=0.6501
+[inkverse.core.evaluation.clip|DEBUG]余弦相似度=0.3003 → 归一化分数=0.6501
+23:44:51 [DEBUG] inkverse.core.evaluation.clip | 余弦相似度=0.2059 → 归一化分数=0.6029
+[inkverse.core.evaluation.clip|DEBUG]余弦相似度=0.2059 → 归一化分数=0.6029
+23:44:51 [INFO ] inkverse.agent | [CLIP评分] 尝试 1 | 分数=0.244: 诗-图锚点=0.206(×0.6) 提示词-图锚点=0.300(×0.4) → 综合=0.244
+[inkverse.agent|INFO][CLIP评分] 尝试 1 | 分数=0.244: 诗-图锚点=0.206(×0.6) 提示词-图锚点=0.300(×0.4) → 综合=0.244
+23:44:51 [INFO ] inkverse.agent | [CLIP评分] 达标（超过基础生成阈值 0.22，自主模式目标另计）: 图文一致性 良好 | 综合余弦 0.244 | 归一化 0.622
+[inkverse.agent|INFO][CLIP评分] 达标（超过基础生成阈值 0.22，自主模式目标另计）: 图文一致性 良好 | 综合余弦 0.244 | 归一化 0.622
+23:44:51 [INFO ] inkverse.agent | [结果反思] 生成验收结论: 接受当前结果但建议微调：主体和氛围基本匹配，可继续优化细节。
+诗歌锚点分: 0.603；提示词锚点分: 0.650；综合分: 0.622。
+[inkverse.agent|INFO][结果反思] 生成验收结论: 接受当前结果但建议微调：主体和氛围基本匹配，可继续优化细节。
+诗歌锚点分: 0.603；提示词锚点分: 0.650；综合分: 0.622。
+23:44:51 [INFO ] inkverse.agent | [自主模式] 改图循环：第 1 轮: 当前 raw=0.244，调用 autonomous_improve_image…（强度=0.75）
+[inkverse.agent|INFO][自主模式] 改图循环：第 1 轮: 当前 raw=0.244，调用 autonomous_improve_image…（强度=0.75）
+23:44:54 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-max
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-max
+23:44:54 [INFO ] inkverse.agent | [自主优化] 提出下一轮改图目标 (qwen-max（qwen）): 增加柳絮触水的细节，增强春意
+[inkverse.agent|INFO][自主优化] 提出下一轮改图目标 (qwen-max（qwen）): 增加柳絮触水的细节，增强春意
+23:44:54 [INFO ] inkverse.core.image.generator | 调用百炼编辑 API: model=qwen-image-edit-max-2026-01-16, strength=0.75
+[inkverse.core.image.generator|INFO]调用百炼编辑 API: model=qwen-image-edit-max-2026-01-16, strength=0.75
+23:44:54 [INFO ] inkverse.core.image.api | 调用 Qwen 图像编辑同步接口 (qwen-image-edit-max-2026-01-16)
+[inkverse.core.image.api|INFO]调用 Qwen 图像编辑同步接口 (qwen-image-edit-max-2026-01-16)
+23:47:56 [WARNING] inkverse.core.image.api | [API qwen-edit] POST 第 1/3 次失败 (ReadTimeout)，1s 后重试
+[inkverse.core.image.api|WARNING][API qwen-edit] POST 第 1/3 次失败 (ReadTimeout)，1s 后重试
+23:50:51 [DEBUG] inkverse.core.image.api | 下载完成，尺寸=(1024, 1024)
+[inkverse.core.image.api|DEBUG]下载完成，尺寸=(1024, 1024)
+23:50:51 [INFO ] inkverse.agent | [图像编辑（指令）] ✓ qwen-image-edit-max-2026-01-16 (qwen-image-edit-max-2026-01-16): 指令: 增加柳絮触水的细节，增强春意（保留原图构图，仅修改指令涉及内容）
+[inkverse.agent|INFO][图像编辑（指令）] ✓ qwen-image-edit-max-2026-01-16 (qwen-image-edit-max-2026-01-16): 指令: 增加柳絮触水的细节，增强春意（保留原图构图，仅修改指令涉及内容）
+23:50:51 [DEBUG] inkverse.core.evaluation.clip | 余弦相似度=0.3120 → 归一化分数=0.6560
+[inkverse.core.evaluation.clip|DEBUG]余弦相似度=0.3120 → 归一化分数=0.6560
+23:50:51 [DEBUG] inkverse.core.evaluation.clip | 余弦相似度=0.2339 → 归一化分数=0.6169
+[inkverse.core.evaluation.clip|DEBUG]余弦相似度=0.2339 → 归一化分数=0.6169
+23:50:51 [INFO ] inkverse.agent | [CLIP重评（编辑后）] 完成 | 分数=0.265: 诗-图=0.234(×0.6) 词-图=0.312(×0.4) → 综合=0.265
+[inkverse.agent|INFO][CLIP重评（编辑后）] 完成 | 分数=0.265: 诗-图=0.234(×0.6) 词-图=0.312(×0.4) → 综合=0.265
+23:50:51 [INFO ] inkverse.agent | [自主模式] 改图循环：第 1 轮完成: CLIP raw=0.265
+[inkverse.agent|INFO][自主模式] 改图循环：第 1 轮完成: CLIP raw=0.265
+23:50:51 [INFO ] inkverse.agent | [自主模式] 改图循环：第 2 轮: 当前 raw=0.265，调用 autonomous_improve_image…（强度=0.63）
+[inkverse.agent|INFO][自主模式] 改图循环：第 2 轮: 当前 raw=0.265，调用 autonomous_improve_image…（强度=0.63）
+23:50:53 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-max
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-max
+23:50:53 [INFO ] inkverse.agent | [自主优化] 提出下一轮改图目标 (qwen-max（qwen）): 增强光线，突出雨后晴天的清新感
+[inkverse.agent|INFO][自主优化] 提出下一轮改图目标 (qwen-max（qwen）): 增强光线，突出雨后晴天的清新感
+23:50:53 [INFO ] inkverse.core.image.generator | 调用百炼编辑 API: model=qwen-image-edit-max-2026-01-16, strength=0.63
+[inkverse.core.image.generator|INFO]调用百炼编辑 API: model=qwen-image-edit-max-2026-01-16, strength=0.63
+23:50:53 [INFO ] inkverse.core.image.api | 调用 Qwen 图像编辑同步接口 (qwen-image-edit-max-2026-01-16)
+[inkverse.core.image.api|INFO]调用 Qwen 图像编辑同步接口 (qwen-image-edit-max-2026-01-16)
+23:53:54 [WARNING] inkverse.core.image.api | [API qwen-edit] POST 第 1/3 次失败 (ReadTimeout)，1s 后重试
+[inkverse.core.image.api|WARNING][API qwen-edit] POST 第 1/3 次失败 (ReadTimeout)，1s 后重试
+23:56:57 [WARNING] inkverse.core.image.api | [API qwen-edit] POST 第 2/3 次失败 (ReadTimeout)，2s 后重试
+[inkverse.core.image.api|WARNING][API qwen-edit] POST 第 2/3 次失败 (ReadTimeout)，2s 后重试
+00:00:00 [ERROR] inkverse.core.image.api | [API qwen-edit] POST 重试 3 次后仍失败: HTTPSConnectionPool(host='dashscope.aliyuncs.com', port=443): Read timed out. (read timeout=180)
+[inkverse.core.image.api|ERROR][API qwen-edit] POST 重试 3 次后仍失败: HTTPSConnectionPool(host='dashscope.aliyuncs.com', port=443): Read timed out. (read timeout=180)
+00:00:00 [INFO ] inkverse.agent | [图像编辑（指令）] 失败 (qwen-image-edit-max-2026-01-16): HTTPSConnectionPool(host='dashscope.aliyuncs.com', port=443): Read timed out. (read timeout=180)
+[inkverse.agent|INFO][图像编辑（指令）] 失败 (qwen-image-edit-max-2026-01-16): HTTPSConnectionPool(host='dashscope.aliyuncs.com', port=443): Read timed out. (read timeout=180)
+00:00:00 [INFO ] inkverse.agent | [自主模式] 改图循环：第 2 轮完成: CLIP raw=0.265
+[inkverse.agent|INFO][自主模式] 改图循环：第 2 轮完成: CLIP raw=0.265
+00:00:00 [INFO ] inkverse.agent | [自主模式] 改图循环：第 3 轮: 当前 raw=0.265，调用 autonomous_improve_image…（强度=0.51）
+[inkverse.agent|INFO][自主模式] 改图循环：第 3 轮: 当前 raw=0.265，调用 autonomous_improve_image…（强度=0.51）
+00:00:04 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-max
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-max
+00:00:04 [INFO ] inkverse.agent | [自主优化] 提出下一轮改图目标 (qwen-max（qwen）): 调整构图，让燕子更显筑巢不易
+[inkverse.agent|INFO][自主优化] 提出下一轮改图目标 (qwen-max（qwen）): 调整构图，让燕子更显筑巢不易
+00:00:04 [INFO ] inkverse.core.image.generator | 调用百炼编辑 API: model=qwen-image-edit-max-2026-01-16, strength=0.51
+[inkverse.core.image.generator|INFO]调用百炼编辑 API: model=qwen-image-edit-max-2026-01-16, strength=0.51
+00:00:04 [INFO ] inkverse.core.image.api | 调用 Qwen 图像编辑同步接口 (qwen-image-edit-max-2026-01-16)
+[inkverse.core.image.api|INFO]调用 Qwen 图像编辑同步接口 (qwen-image-edit-max-2026-01-16)
+00:03:06 [DEBUG] inkverse.core.image.api | 下载完成，尺寸=(1024, 1024)
+[inkverse.core.image.api|DEBUG]下载完成，尺寸=(1024, 1024)
+00:03:06 [INFO ] inkverse.agent | [图像编辑（指令）] ✓ qwen-image-edit-max-2026-01-16 (qwen-image-edit-max-2026-01-16): 指令: 调整构图，让燕子更显筑巢不易（保留原图构图，仅修改指令涉及内容）
+[inkverse.agent|INFO][图像编辑（指令）] ✓ qwen-image-edit-max-2026-01-16 (qwen-image-edit-max-2026-01-16): 指令: 调整构图，让燕子更显筑巢不易（保留原图构图，仅修改指令涉及内容）
+00:03:06 [DEBUG] inkverse.core.evaluation.clip | 余弦相似度=0.2947 → 归一化分数=0.6474
+[inkverse.core.evaluation.clip|DEBUG]余弦相似度=0.2947 → 归一化分数=0.6474
+00:03:06 [DEBUG] inkverse.core.evaluation.clip | 余弦相似度=0.2316 → 归一化分数=0.6158
+[inkverse.core.evaluation.clip|DEBUG]余弦相似度=0.2316 → 归一化分数=0.6158
+00:03:06 [INFO ] inkverse.agent | [CLIP重评（编辑后）] 完成 | 分数=0.257: 诗-图=0.232(×0.6) 词-图=0.295(×0.4) → 综合=0.257
+[inkverse.agent|INFO][CLIP重评（编辑后）] 完成 | 分数=0.257: 诗-图=0.232(×0.6) 词-图=0.295(×0.4) → 综合=0.257
+00:03:06 [INFO ] inkverse.agent | [自主模式] 改图循环：第 3 轮完成: CLIP raw=0.257
+[inkverse.agent|INFO][自主模式] 改图循环：第 3 轮完成: CLIP raw=0.257
+00:03:06 [INFO ] inkverse.agent | [自主模式] 自适应停止: 连续 2 轮 CLIP 无显著提升（delta ≤ 0.01），提前退出改图循环
+[inkverse.agent|INFO][自主模式] 自适应停止: 连续 2 轮 CLIP 无显著提升（delta ≤ 0.01），提前退出改图循环
+00:03:06 [INFO ] inkverse.agent | [自主模式] 预算耗尽，未达到目标分: 当前最优 CLIP raw=0.265 < 目标 0.3；已用完改图上限 3 轮。返回历史最优结果，而不是伪装达标。
+[inkverse.agent|INFO][自主模式] 预算耗尽，未达到目标分: 当前最优 CLIP raw=0.265 < 目标 0.3；已用完改图上限 3 轮。返回历史最优结果，而不是伪装达标。
+00:03:06 [INFO ] inkverse.agent | [自主模式] 结束: ⚠ 未达标，返回最优结果（raw=0.265） | 目标 raw≥0.3
+[inkverse.agent|INFO][自主模式] 结束: ⚠ 未达标，返回最优结果（raw=0.265） | 目标 raw≥0.3
+00:03:06 [INFO ] inkverse.agent | [自主模式] LLM-driven 改图循环启动: 工具=['edit_image', 'refine_poem_and_regen', 'stop'] | 目标 raw=0.300 | 预算=3
+[inkverse.agent|INFO][自主模式] LLM-driven 改图循环启动: 工具=['edit_image', 'refine_poem_and_regen', 'stop'] | 目标 raw=0.300 | 预算=3
+00:03:10 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-plus
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-plus
+00:03:10 [INFO ] inkverse.agent | [自主模式] LLM 决策 (1/3): tool=edit_image reasoning=当前 raw 0.244 距目标 0.300 仍有差距，视觉锚点中‘柳绵点水’和‘燕子不成泥’表现不足，需重写 prompt 突出这两个关键动作细节
+[inkverse.agent|INFO][自主模式] LLM 决策 (1/3): tool=edit_image reasoning=当前 raw 0.244 距目标 0.300 仍有差距，视觉锚点中‘柳绵点水’和‘燕子不成泥’表现不足，需重写 prompt 突出这两个关键动作细节
+00:03:10 [DEBUG] inkverse.core.agent.tools | [ToolRegistry] 调度工具 edit_image
+[inkverse.core.agent.tools|DEBUG][ToolRegistry] 调度工具 edit_image
+00:03:12 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-max
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-max
+00:03:12 [INFO ] inkverse.agent | [自主优化] 提出下一轮改图目标 (qwen-max（qwen）): 增加画面中雨后晴天的光线亮度
+[inkverse.agent|INFO][自主优化] 提出下一轮改图目标 (qwen-max（qwen）): 增加画面中雨后晴天的光线亮度
+00:03:23 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-max
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-max
+00:03:23 [INFO ] inkverse.agent | [改图规划] LLM 规划并改写 Prompt（保留原有意象） (qwen-max（qwen）): 【改图意见】增加画面中雨后晴天的光线亮度
+
+【原 Prompt 摘要】
+Chinese ink wash painting, sumi-e, monochrome, minimalist, Song Dynasty style
+Subject: willow fluff, swallows
+Environment: early spring, clear weather after rain, s
+[inkverse.agent|INFO][改图规划] LLM 规划并改写 Prompt（保留原有意象） (qwen-max（qwen）): 【改图意见】增加画面中雨后晴天的光线亮度
+
+【原 Prompt 摘要】
+Chinese ink wash painting, sumi-e, monochrome, minimalist, Song Dynasty style
+Subject: willow fluff, swallows
+Environment: early spring, clear weather after rain, s
+00:03:23 [INFO ] inkverse.agent | [图像生成] 尝试 1/1 (bailian/qwen-image-2.0-pro-2026-06-22): backend=bailian
+[inkverse.agent|INFO][图像生成] 尝试 1/1 (bailian/qwen-image-2.0-pro-2026-06-22): backend=bailian
+00:03:23 [INFO ] inkverse.core.image.generator | 调用百炼 API: model=qwen-image-2.0-pro-2026-06-22
+[inkverse.core.image.generator|INFO]调用百炼 API: model=qwen-image-2.0-pro-2026-06-22
+00:03:23 [INFO ] inkverse.core.image.api | 调用同步多模态生图接口 (qwen-image-2.0-pro-2026-06-22, 1024*1024)
+[inkverse.core.image.api|INFO]调用同步多模态生图接口 (qwen-image-2.0-pro-2026-06-22, 1024*1024)
+00:04:27 [DEBUG] inkverse.core.image.api | 正在下载图像…
+[inkverse.core.image.api|DEBUG]正在下载图像…
+00:04:34 [DEBUG] inkverse.core.image.api | 图像下载完成，尺寸=(1024, 1024)
+[inkverse.core.image.api|DEBUG]图像下载完成，尺寸=(1024, 1024)
+00:04:34 [DEBUG] inkverse.core.evaluation.clip | 余弦相似度=0.3032 → 归一化分数=0.6516
+[inkverse.core.evaluation.clip|DEBUG]余弦相似度=0.3032 → 归一化分数=0.6516
+00:04:34 [DEBUG] inkverse.core.evaluation.clip | 余弦相似度=0.1974 → 归一化分数=0.5987
+[inkverse.core.evaluation.clip|DEBUG]余弦相似度=0.1974 → 归一化分数=0.5987
+00:04:34 [INFO ] inkverse.agent | [CLIP评分] 尝试 1 | 分数=0.240: 诗-图锚点=0.197(×0.6) 提示词-图锚点=0.303(×0.4) → 综合=0.240
+[inkverse.agent|INFO][CLIP评分] 尝试 1 | 分数=0.240: 诗-图锚点=0.197(×0.6) 提示词-图锚点=0.303(×0.4) → 综合=0.240
+00:04:34 [INFO ] inkverse.agent | [CLIP评分] 达标（超过基础生成阈值 0.22，自主模式目标另计）: 图文一致性 良好 | 综合余弦 0.240 | 归一化 0.620
+[inkverse.agent|INFO][CLIP评分] 达标（超过基础生成阈值 0.22，自主模式目标另计）: 图文一致性 良好 | 综合余弦 0.240 | 归一化 0.620
+00:04:34 [INFO ] inkverse.agent | [自主模式] LLM 改图：第 1 轮完成: CLIP raw=0.240
+[inkverse.agent|INFO][自主模式] LLM 改图：第 1 轮完成: CLIP raw=0.240
+00:04:38 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-plus
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-plus
+00:04:38 [INFO ] inkverse.agent | [自主模式] LLM 决策 (2/3): tool=edit_image reasoning=CLIP 0.244 仍低于目标，delta +0.004 表明有提升趋势，需强化诗中‘雨乍晴’与‘柳绵点水’的视觉对应，避免重复上轮‘轻盈感’措辞
+[inkverse.agent|INFO][自主模式] LLM 决策 (2/3): tool=edit_image reasoning=CLIP 0.244 仍低于目标，delta +0.004 表明有提升趋势，需强化诗中‘雨乍晴’与‘柳绵点水’的视觉对应，避免重复上轮‘轻盈感’措辞
+00:04:38 [DEBUG] inkverse.core.agent.tools | [ToolRegistry] 调度工具 edit_image
+[inkverse.core.agent.tools|DEBUG][ToolRegistry] 调度工具 edit_image
+00:04:41 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-max
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-max
+00:04:41 [INFO ] inkverse.agent | [自主优化] 提出下一轮改图目标 (qwen-max（qwen）): 增加花底日初长的光影对比
+[inkverse.agent|INFO][自主优化] 提出下一轮改图目标 (qwen-max（qwen）): 增加花底日初长的光影对比
+00:04:46 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-max
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-max
+00:04:46 [INFO ] inkverse.agent | [改图规划] LLM 规划并改写 Prompt（保留原有意象） (qwen-max（qwen）): 【改图意见】增加花底日初长的光影对比
+
+【原 Prompt 摘要】
+Chinese ink wash painting, sumi-e, monochrome, minimalist, Song Dynasty style
+Subject: willow fluff, swallows
+Environment: early spring, clear weather after rain, bri
+[inkverse.agent|INFO][改图规划] LLM 规划并改写 Prompt（保留原有意象） (qwen-max（qwen）): 【改图意见】增加花底日初长的光影对比
+
+【原 Prompt 摘要】
+Chinese ink wash painting, sumi-e, monochrome, minimalist, Song Dynasty style
+Subject: willow fluff, swallows
+Environment: early spring, clear weather after rain, bri
+00:04:46 [INFO ] inkverse.agent | [图像生成] 尝试 1/1 (bailian/qwen-image-2.0-pro-2026-06-22): backend=bailian
+[inkverse.agent|INFO][图像生成] 尝试 1/1 (bailian/qwen-image-2.0-pro-2026-06-22): backend=bailian
+00:04:46 [INFO ] inkverse.core.image.generator | 调用百炼 API: model=qwen-image-2.0-pro-2026-06-22
+[inkverse.core.image.generator|INFO]调用百炼 API: model=qwen-image-2.0-pro-2026-06-22
+00:04:46 [INFO ] inkverse.core.image.api | 调用同步多模态生图接口 (qwen-image-2.0-pro-2026-06-22, 1024*1024)
+[inkverse.core.image.api|INFO]调用同步多模态生图接口 (qwen-image-2.0-pro-2026-06-22, 1024*1024)
+00:05:48 [DEBUG] inkverse.core.image.api | 正在下载图像…
+[inkverse.core.image.api|DEBUG]正在下载图像…
+00:05:54 [DEBUG] inkverse.core.image.api | 图像下载完成，尺寸=(1024, 1024)
+[inkverse.core.image.api|DEBUG]图像下载完成，尺寸=(1024, 1024)
+00:05:54 [DEBUG] inkverse.core.evaluation.clip | 余弦相似度=0.2850 → 归一化分数=0.6425
+[inkverse.core.evaluation.clip|DEBUG]余弦相似度=0.2850 → 归一化分数=0.6425
+00:05:54 [DEBUG] inkverse.core.evaluation.clip | 余弦相似度=0.1949 → 归一化分数=0.5975
+[inkverse.core.evaluation.clip|DEBUG]余弦相似度=0.1949 → 归一化分数=0.5975
+00:05:54 [INFO ] inkverse.agent | [CLIP评分] 尝试 1 | 分数=0.231: 诗-图锚点=0.195(×0.6) 提示词-图锚点=0.285(×0.4) → 综合=0.231
+[inkverse.agent|INFO][CLIP评分] 尝试 1 | 分数=0.231: 诗-图锚点=0.195(×0.6) 提示词-图锚点=0.285(×0.4) → 综合=0.231
+00:05:54 [INFO ] inkverse.agent | [CLIP评分] 达标（超过基础生成阈值 0.22，自主模式目标另计）: 图文一致性 良好 | 综合余弦 0.231 | 归一化 0.615
+[inkverse.agent|INFO][CLIP评分] 达标（超过基础生成阈值 0.22，自主模式目标另计）: 图文一致性 良好 | 综合余弦 0.231 | 归一化 0.615
+00:05:54 [INFO ] inkverse.agent | [自主模式] LLM 改图：第 2 轮完成: CLIP raw=0.231
+[inkverse.agent|INFO][自主模式] LLM 改图：第 2 轮完成: CLIP raw=0.231
+00:05:57 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-plus
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-plus
+00:05:57 [INFO ] inkverse.agent | [自主模式] LLM 决策 (3/3): tool=edit_image reasoning=当前CLIP 0.244距目标仍有差距，delta+0.013显示微调有效；剩余1次预算宜优先用edit_api保留构图，聚焦诗中'花底日初长'与'燕子不成泥'
+[inkverse.agent|INFO][自主模式] LLM 决策 (3/3): tool=edit_image reasoning=当前CLIP 0.244距目标仍有差距，delta+0.013显示微调有效；剩余1次预算宜优先用edit_api保留构图，聚焦诗中'花底日初长'与'燕子不成泥'
+00:05:57 [DEBUG] inkverse.core.agent.tools | [ToolRegistry] 调度工具 edit_image
+[inkverse.core.agent.tools|DEBUG][ToolRegistry] 调度工具 edit_image
+00:05:59 [DEBUG] inkverse.core.models.adapter | API 响应完成: qwen-max
+[inkverse.core.models.adapter|DEBUG]API 响应完成: qwen-max
+00:05:59 [INFO ] inkverse.agent | [自主优化] 提出下一轮改图目标 (qwen-max（qwen）): 调整画面构图，使柳絮和燕子更居中突出
+[inkverse.agent|INFO][自主优化] 提出下一轮改图目标 (qwen-max（qwen）): 调整画面构图，使柳絮和燕子更居中突出
+00:05:59 [INFO ] inkverse.core.image.generator | 调用百炼编辑 API: model=qwen-image-edit-max-2026-01-16, strength=0.75
+[inkverse.core.image.generator|INFO]调用百炼编辑 API: model=qwen-image-edit-max-2026-01-16, strength=0.75
+00:05:59 [INFO ] inkverse.core.image.api | 调用 Qwen 图像编辑同步接口 (qwen-image-edit-max-2026-01-16)
+[inkverse.core.image.api|INFO]调用 Qwen 图像编辑同步接口 (qwen-image-edit-max-2026-01-16)
+00:08:29 [DEBUG] inkverse.core.image.api | 下载完成，尺寸=(1024, 1024)
+[inkverse.core.image.api|DEBUG]下载完成，尺寸=(1024, 1024)
+00:08:29 [INFO ] inkverse.agent | [图像编辑（指令）] ✓ qwen-image-edit-max-2026-01-16 (qwen-image-edit-max-2026-01-16): 指令: 调整画面构图，使柳絮和燕子更居中突出（保留原图构图，仅修改指令涉及内容）
+[inkverse.agent|INFO][图像编辑（指令）] ✓ qwen-image-edit-max-2026-01-16 (qwen-image-edit-max-2026-01-16): 指令: 调整画面构图，使柳絮和燕子更居中突出（保留原图构图，仅修改指令涉及内容）
+00:08:29 [DEBUG] inkverse.core.evaluation.clip | 余弦相似度=0.2960 → 归一化分数=0.6480
+[inkverse.core.evaluation.clip|DEBUG]余弦相似度=0.2960 → 归一化分数=0.6480
+00:08:29 [DEBUG] inkverse.core.evaluation.clip | 余弦相似度=0.2102 → 归一化分数=0.6051
+[inkverse.core.evaluation.clip|DEBUG]余弦相似度=0.2102 → 归一化分数=0.6051
+00:08:29 [INFO ] inkverse.agent | [CLIP重评（编辑后）] 完成 | 分数=0.245: 诗-图=0.210(×0.6) 词-图=0.296(×0.4) → 综合=0.245
+[inkverse.agent|INFO][CLIP重评（编辑后）] 完成 | 分数=0.245: 诗-图=0.210(×0.6) 词-图=0.296(×0.4) → 综合=0.245
+00:08:29 [INFO ] inkverse.agent | [自主模式] LLM 改图：第 3 轮完成: CLIP raw=0.245
+[inkverse.agent|INFO][自主模式] LLM 改图：第 3 轮完成: CLIP raw=0.245
+00:08:29 [INFO ] inkverse.agent | [自主模式] 预算耗尽，未达到目标分: 当前最优 CLIP raw=0.245 < 目标 0.3；已用完改图上限 3 轮。返回历史最优结果，而不是伪装达标。
+[inkverse.agent|INFO][自主模式] 预算耗尽，未达到目标分: 当前最优 CLIP raw=0.245 < 目标 0.3；已用完改图上限 3 轮。返回历史最优结果，而不是伪装达标。
+00:08:29 [INFO ] inkverse.agent | [自主模式] 结束: ⚠ 未达标，返回最优结果（raw=0.245） | 目标 raw≥0.3
+[inkverse.agent|INFO][自主模式] 结束: ⚠ 未达标，返回最优结果（raw=0.245） | 目标 raw≥0.3
+      base=0.244 → fixed=0.265（edit 3/gen 0） · llm=0.245（edit 1/gen 2，决策 3）
+
+# 实验 B 过程汇总 · LLM-driven vs 写死改图循环（同基图配对）
+_计划 27 题 / 完成 1 题（含历史续跑）· single-shot · gen=3/100 · edit=4/100 · max_rounds=3 · target=0.3_
+
+## 1. CLIP raw 终值（配对描述统计，不做显著性宣称）
+| 臂 | n | mean | std | median | min | max |
+| --- | --- | --- | --- | --- | --- | --- |
+| 基图 | 1 | 0.244 | 0.000 | 0.244 | 0.244 | 0.244 |
+| 写死臂 | 1 | 0.265 | 0.000 | 0.265 | 0.265 | 0.265 |
+| LLM 臂 | 1 | 0.245 | 0.000 | 0.245 | 0.245 | 0.245 |
+
+**LLM 臂 − 写死臂**：mean Δ=-0.0200 · median Δ=-0.0200 · LLM 臂更高比例=0.0%（n=1）
+
+## 2. VLM 硬约束兑现率（kw v1 · qwen-vl-max）
+| 图 | hit | total | 兑现率 |
+| --- | --- | --- | --- |
+| 基图 | 2 | 2 | 100.0% |
+| 写死臂终图 | 2 | 2 | 100.0% |
+| LLM 臂终图 | 2 | 2 | 100.0% |
+
+## 3. LLM 臂决策埋点（llm_loop_decisions 首采）
+总决策 3 · fallback 0（0.0%）· stale_override 0
+
+| tool | 次数 | 占比 |
+| --- | --- | --- |
+| edit_image(rewrite_regen) | 2 | 66.7% |
+| edit_image(edit_api) | 1 | 33.3% |
+
+## 4. 成本
+| 指标 | 写死臂 | LLM 臂 |
+| --- | --- | --- |
+| 平均循环耗时 (s) | 1095.1 | 322.4 |
+| gen 消耗合计 | 0 | 2 |
+| edit 消耗合计 | 3 | 1 |
+
+> 判读口径（预登记）：n≤27、single-shot、CLIP_MAX_RETRIES=0 为实验条件；不称 ceiling/上限，不做显著性宣称。正式报告另行撰写。
+
+原始数据: eval\runs\llm_loop_ab\results.jsonl
+过程汇总: eval\runs\llm_loop_ab\summary.md
+配额消耗: gen=3/100 · edit=4/100

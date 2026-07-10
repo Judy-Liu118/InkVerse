@@ -1,0 +1,20 @@
+[llm_loop_ab] 运行日志（终端全量镜像）: eval\runs\llm_loop_ab\logs\run_20260709_233315.log
+[llm_loop_ab] 计划 27 题 · 已完成 1 · 本次 0
+[llm_loop_ab] gen=qwen-image-2.0-pro-2026-06-22（预算 100，已用 3） · edit=qwen-image-edit-max-2026-01-16（预算 100，已用 4） · CLIP_MAX_RETRIES=0
+23:33:15 [INFO ] inkverse.core.models.adapter | 后端=local_lora（本地微调模型）
+23:33:15 [INFO ] inkverse.core.models.adapter | 后端=qwen | 模型=qwen-plus
+23:33:15 [INFO ] inkverse.core.models.adapter | 后端=qwen | 模型=qwen-plus
+23:33:15 [INFO ] inkverse.core.models.adapter | 后端=qwen | 模型=qwen-max
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\poetry_env\lib\runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "D:\anaconda3\envs\poetry_env\lib\runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "D:\PythonProject\InkVerse\eval\eval_llm_loop_ab.py", line 604, in <module>
+    main()
+  File "D:\PythonProject\InkVerse\eval\eval_llm_loop_ab.py", line 597, in main
+    print(md)
+  File "D:\PythonProject\InkVerse\eval\eval_llm_loop_ab.py", line 179, in write
+    self._primary.write(data)
+UnicodeEncodeError: 'gbk' codec can't encode character '\u2212' in position 433: illegal multibyte sequence
