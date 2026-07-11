@@ -156,7 +156,10 @@ def get_style_suffix(style_name: str, lang: str) -> str:
 
 # ===== 远程 API 超时与重试 =====
 API_TIMEOUT_SUBMIT   = 30    # 任务提交（异步）
-API_TIMEOUT_SYNC     = 180   # 同步生图/编辑接口（Z-Image / Qwen-Image / Qwen-Image-Edit）
+API_TIMEOUT_SYNC     = 300   # 同步生图/编辑接口（Z-Image / Qwen-Image / Qwen-Image-Edit）
+                             # 编辑接口实测单次 130-175s（实验 B run1/2），晚高峰会越过
+                             # 旧值 180s 触发 ReadTimeout；且同步接口客户端超时后服务端
+                             # 仍可能完成生成并计费，重试等于重复扣配额，故放宽到 300s。
 API_TIMEOUT_POLL     = 15    # 轮询任务状态
 API_TIMEOUT_DOWNLOAD = 60    # 图像下载
 API_MAX_RETRIES      = 3     # 连接/超时类失败的指数退避重试次数（1s, 2s, 4s）
