@@ -206,7 +206,9 @@ def _poem_html(poem_text: str, title: str = "", placeholder: bool = False) -> st
 
     return (
         '<div style="'
-        'font-family:\'ZCOOL XiaoWei\',\'Noto Serif SC\',\'STKaiti\',\'楷体\',\'SimSun\',\'Microsoft YaHei\',serif;'
+        # 诗文/诗名是变化文本，不能用字库不全的 ZCOOL XiaoWei 打头——
+        # 其子集化 webfont 对缺字码点渲染 .notdef 黑块而非回退下一字体
+        'font-family:\'Noto Serif SC\',\'STKaiti\',\'楷体\',\'SimSun\',\'Microsoft YaHei\',serif;'
         'font-size:1.5rem;line-height:2.1;text-align:center;'
         'padding:32px 36px 28px;letter-spacing:0.22em;'
         'background:#fdf5e6;color:#28190a;'

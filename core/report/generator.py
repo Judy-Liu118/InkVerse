@@ -90,7 +90,8 @@ class ReportGenerator:
     max-width: 860px; margin: 0 auto; padding: 40px 32px 60px;
   }}
   h1 {{
-    font-family: 'ZCOOL XiaoWei', '楷体', serif;
+    /* h1 含诗名（变化文本），ZCOOL XiaoWei 字库不全会出 .notdef 黑块，不可打头 */
+    font-family: 'STKaiti', '楷体', 'Noto Serif SC', serif;
     font-size: 2.4rem; text-align: center; color: var(--red);
     letter-spacing: 0.4em; font-weight: 400;
     border-bottom: 1px solid var(--border); padding-bottom: 16px;

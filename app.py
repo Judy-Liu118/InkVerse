@@ -62,7 +62,7 @@ textarea, input[type="text"] { background:var(--panel) !important; border:1px so
 textarea:focus, input[type="text"]:focus { border-color:var(--gold) !important; box-shadow:0 0 0 3px rgba(184,137,46,0.12) !important; outline:none !important; }
 textarea::placeholder { color:var(--ink-faint) !important; }
 
-#title-out textarea, #title-out input { font-family:'ZCOOL XiaoWei','楷体',serif !important; font-size:2rem !important; text-align:center !important; color:var(--red) !important; letter-spacing:0.38em !important; background:transparent !important; border:none !important; border-bottom:1px solid var(--border) !important; border-radius:0 !important; padding:6px 0 10px !important; font-weight:500 !important; }
+#title-out textarea, #title-out input { font-family:'STKaiti','楷体','Noto Serif SC',serif !important; font-size:2rem !important; text-align:center !important; color:var(--red) !important; letter-spacing:0.38em !important; background:transparent !important; border:none !important; border-bottom:1px solid var(--border) !important; border-radius:0 !important; padding:6px 0 10px !important; font-weight:500 !important; }
 
 #poem-edit textarea { font-size:1.04rem !important; line-height:1.9 !important; }
 #prompt-out textarea { font-family:'Courier New',monospace !important; font-size:0.82rem !important; color:var(--ink-mid) !important; line-height:1.65 !important; border-style:dashed !important; }
