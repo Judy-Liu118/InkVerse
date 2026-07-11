@@ -385,53 +385,6 @@ class PoemGenerator:
         result["total_generated"] = len(candidates)
         return result
 
-    def generate_arena(self, user_request: str, score_adapter,
-                       generation_adapter=None, creative_brief: str = ""):
-        """全自主模式：生成 5 首 → 硬门控 → 本地分 Top3 → arena pairwise → 冠军。
-
-        返回 dict: {genre_name, champion, backup, total_generated, arena_result}
-        """
-        genre_name, num_lines, chars_per_line = self.scorer.detect_genre(user_request)
-        _backend = getattr(generation_adapter, 'backend', 'local') if generation_adapter else 'local'
-        use_api, model, tokenizer = self._resolve_model(generation_adapter, _backend)
-
-        _log.info("使用 %s 模型", "API" if use_api else "本地微调模型 (LoRA)")
-        candidates = self._generate_candidates(
-            user_request, generation_adapter, model, tokenizer,
-            num_lines, chars_per_line, use_api,
-            creative_brief=creative_brief, count=5, start_index=0,
-        )
-        if not use_api:
-            from core.models.manager import ModelManager
-            mm = ModelManager()
-            mm._release_fine()
-            _log.info("[显存] 候选生成完毕，释放微调模型。")
-
-        if not candidates or len(candidates) < 2:
-            return {
-                "genre_name": genre_name,
-                "champion": candidates[0] if candidates else "（生成失败）",
-                "backup": candidates[1] if len(candidates) > 1 else "",
-                "total_generated": len(candidates),
-            }
-
-        # 硬门控 → 本地分 Top3 → arena pairwise → 冠军
-        result = self.scorer.arena_select_champion(
-            candidates, user_request, score_adapter,
-            num_lines, chars_per_line,
-        )
-        return {
-            "genre_name": genre_name,
-            "champion": result["champion"],
-            "backup": result["backup"],
-            "champion_topic": result.get("champion_topic", 0.5),
-            "champion_local_total": result.get("champion_local_total", 0.0),
-            "champion_final": result.get("champion_final", 0.0),
-            "gated_count": result.get("gated_count", 0),
-            "total_generated": len(candidates),
-            "arena_result": result,
-        }
-
     def score_single_poem(self, poem: str, user_request: str, score_adapter) -> dict:
         return self.scorer.score_single(poem, user_request, score_adapter)
 
