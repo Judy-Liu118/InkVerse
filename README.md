@@ -21,7 +21,7 @@
 
 三条主线各一个数字钩子：
 
-- **微调**：LoRA 把候选合格率提升 1.8 倍（36%→64%）但 best 候选持平——提升地板不提升天花板；移除格式 prompt 后格律合规率反升至 96%（规则已内化进权重）
+- **微调**：LoRA 把候选合格率提升 1.8 倍（36%→64%）但 best 候选持平——提升地板不提升天花板；移除格式 prompt 后格律合规率反升至 96%（规则已内化进权重，上游数据清洗与训练记录见 [docs/LORA_TRAINING.md](docs/LORA_TRAINING.md)）
 - **评估**：跨家族 4 评委 pairwise 抗 self-bias；position-bias 审计经历"发现显著 → 自我证伪 → 方向反转 → 随机化防御落地"完整闭环
 - **agent**：预登记的同基图配对 A/B（n=27 × 2 次独立运行）显示 LLM-driven 改图循环与写死循环 CLIP 终值打平、效率占优；主动 replication 撤回了首轮 2 个不稳观察，并量化出管线噪声 ≈ 臂间效应 7 倍——**基于此数据，该特性生产默认关闭**
 
@@ -124,7 +124,11 @@ hf download Qwen/Qwen2.5-1.5B-Instruct --local-dir D:\AI_Models\Qwen2.5-1.5B-Ins
 
 **古诗 LoRA 权重**
 
-基于古典诗词数据集微调，数据集 [Judy-Liu118/poetry-lora](https://huggingface.co/datasets/Judy-Liu118/poetry-lora)。权重放入 `models/poetry_lora/`。古诗生成默认使用 LoRA，本地微调模型在格律规范性上优于通用 API。
+权重发布于 [Judy-Liu118/poetry-lora](https://huggingface.co/Judy-Liu118/poetry-lora)，下载后放入 `models/poetry_lora/`。基于开源古诗语料 [CanvaChen/llm-dataset-chinese-poetry](https://github.com/CanvaChen/llm-dataset-chinese-poetry) 经五阶段格律清洗管线（34.6 万首 → 18.1 万首合律 → 3 万条均衡 SFT 样本，含名诗白名单与出律配额 ≤5% 等质量控制）微调 Qwen2.5-1.5B 得到——数据清洗与训练全记录见 [docs/LORA_TRAINING.md](docs/LORA_TRAINING.md)。古诗生成默认使用 LoRA，本地微调模型在格律规范性上优于通用 API。
+
+```bash
+hf download Judy-Liu118/poetry-lora --local-dir models/poetry_lora
+```
 
 **Z-Image Turbo FP8**
 
