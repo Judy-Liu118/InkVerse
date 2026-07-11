@@ -1,5 +1,10 @@
 # 实验 B 报告：LLM-driven vs 写死改图循环（同基图配对，n=27）
 
+> **2026-07-11 更新**：本实验已按预登记做同条件独立重复（run 2），见
+> `REPORT_llm_loop_ab_run2_20260711.md`。主结论"CLIP 终值打平 + LLM 臂效率占优"
+> 复现；但本报告 §2 的"达标 5/13 vs 3/13"与 §4 的 edit_api 选择效应苗头
+> **被 run 2 证伪并撤回**，请以 run 2 报告的跨 run 判读为准。
+
 - 日期：2026-07-10 · 预登记：`eval/eval_llm_loop_ab.py` docstring（commit 0ce671c，跑前提交；记录增强 1668625，仅加审计字段不改口径）
 - 数据：`eval/runs/llm_loop_ab/`（results.jsonl + summary.md + logs/ 终端全量镜像；中间图 147 张仅存本地，207MB 不入库）
 - 口径（预登记，冻结）：n≤27、single-shot、CLIP_MAX_RETRIES=0 为实验条件；不称 ceiling/上限；不做显著性宣称，只报配对描述统计与方向；正负如实。

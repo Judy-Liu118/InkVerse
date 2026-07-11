@@ -48,3 +48,4 @@ desktop.ini
 # eval run artifacts: keep records/logs, exclude bulky image sets of the full run
 eval/runs/llm_loop_ab/images/
 !eval/runs/**/*.log
+eval/runs/llm_loop_ab_run2/images/
