@@ -342,7 +342,7 @@ state = reg.execute("edit_image", state, feedback="强化孤舟主体")   # 按�
 
 ## 离线评估
 
-`eval/` 目录提供 4 个独立可跑的评估脚本，用于量化项目里的核心设计点：
+`eval/` 目录提供 5 个独立可跑的评估脚本，用于量化项目里的核心设计点：
 
 ```bash
 # 1. 诗歌生成模型质量对比（BWS + 跨家族多评委 pairwise，支持 --repeat 多 run）
@@ -439,7 +439,7 @@ LLM-driven 路径在产品 UI 已可勾选启用（`app.py` "🤖 全自主创�
 
 ```bash
 pytest tests/ -v
-# 164 passed in ~5s（全部离线，不触发真实 LLM / 图像 API）
+# 178 passed in ~8s（全部离线，不触发真实 LLM / 图像 API）
 ```
 
 覆盖：

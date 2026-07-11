@@ -1,6 +1,6 @@
 # eval/ —— 离线评估脚本
 
-四个主评估（下表）验证项目最核心的设计点；此外还有一组分析/探针脚本（`_` 前缀，
+五个主评估（下表）验证项目最核心的设计点；此外还有一组分析/探针脚本（`_` 前缀，
 见"辅助工具与探针"节），承载显著性分析与 position-bias 审计的完整故事线。
 
 > ⚠ 这些脚本会真实调用 API、生图、跑 CLIP，**会烧钱、占显存、花时间**。
@@ -14,6 +14,7 @@
 | `eval_clip.py` | 双锚点 CLIP 相对单锚点的对齐提升（含 VLM ground truth）| 10 | 10–20 min |
 | `eval_refine.py` | 自动方向性诗评 + refine_poem 的提升幅度 | 10 | 5–10 min |
 | `eval_autonomous.py` | 全自主模式相对单轮模式的 CLIP 终值提升 | 5 | 15–30 min |
+| `eval_llm_loop_ab.py` | LLM-driven vs 写死改图循环（同基图配对 A/B；预登记 + 配额白名单熔断 + 逐轮中间图/决策埋点/终端镜像全审计）| `--limit 1` (冒烟) / 27 (全量) | 15 min / 3.5–4 h |
 
 辅助工具与探针：
 - `analyze_clip_dual.py` —— 对 eval_clip JSON 做 dual 锚点合理性分析（α grid search + 锚点互补性）
@@ -91,6 +92,8 @@ python -m eval.analyze_clip_dual outputs/eval/eval_clip_<timestamp>.json
 | [`REPORT_vlm_hard_constraint_20260701.md`](REPORT_vlm_hard_constraint_20260701.md) | VLM 硬约束命中率（30 张图逐 keyword yes/no）—— 独立打补丁 CLIP "图里东西多"盲点；rich 题 δ=0.17 命中率 80% 佐证 sweep 结论 | 2026-07-01 |
 | [`REPORT_arena_ablation_20260701.md`](REPORT_arena_ablation_20260701.md) | **擂台机制净收益消融**：arm A (`max_poem_rounds=0`, 无擂台) vs arm B (`max_poem_rounds=2`, 有擂台)，主池 n=22（04-22 backend）+ 辅池 n=10（03-03 backend）—— CLIP mean 平手（Δ -0.002）但 VLM 硬约束 arm B 主池 +18.2pp（60.6% → 78.8%），结论保留擂台。**后续补强（07-05/07-06）**：§2.5 McNemar+bootstrap 显著性、§2.6 跨家族 VLM 复核（glm-4v-plus 同向 +15.2pp）、§2.7 kw 定义严/松包络 [+9.1, +24.2]pp、§6.4 position-bias 探针系列注记 | 2026-07-01（持续更新） |
 | [`REPORT_eval_refine_LoRA_n32_20260702.md`](REPORT_eval_refine_LoRA_n32_20260702.md) | **eval_refine 主报告**：LoRA baseline + qwen-plus 单轮 refine（n=32 主 benchmark，生产链路真实场景）—— 改动率 53.1%、cohesion +0.031 全样本 / +0.074 改动样本主导、rhyme 因 feedback 硬约束零效果、pingze -0.004 副作用；refine 真实价值维度是"意境连贯度重塑"而非 LoRA 弱项押韵优化 | 2026-07-02 |
+| [`REPORT_llm_loop_ab_n27_20260710.md`](REPORT_llm_loop_ab_n27_20260710.md) | **实验 B run 1**：LLM-driven vs 写死改图循环，同基图配对 n=27（硬约束题集全集，预登记跑前 commit）—— CLIP 终值打平（循环子集 Δ+0.004）、LLM 臂耗时 -39%/调用更少、target=0.30 区分度不足教训、VLM 同图重判不一致发现；配图库 [`runs/llm_loop_ab/gallery/GALLERY.md`](runs/llm_loop_ab/gallery/GALLERY.md) | 2026-07-10 |
+| [`REPORT_llm_loop_ab_run2_20260711.md`](REPORT_llm_loop_ab_run2_20260711.md) | **实验 B run 2（同条件独立重复）**：打平复现（Δ 符号翻转、幅度均 ≤0.005）、效率方向复现；run 1 两个次级苗头（达标更多、edit 选择效应）证伪并撤回；管线噪声 mean 0.029 ≈ 臂间效应 7 倍——单次运行 ≤0.01 差异不可判读的量化证据；配图库 [`runs/llm_loop_ab_run2/gallery/GALLERY.md`](runs/llm_loop_ab_run2/gallery/GALLERY.md) | 2026-07-11 |
 
 完整方法论（公式 / 系数 / 评委 prompt 全文 / 阈值清单）冻结在 [`METHODOLOGY.md`](METHODOLOGY.md) —— 后续代码漂移仍能解释这份报告。
 
@@ -137,3 +140,5 @@ python -m eval.dataset --dump   # → eval/benchmark_themes.json
 ✅ 正例：「n=32 × 3 run 主跑：LoRA 候选 pass@0.7 合格率从 36.2% ± 2.6% 提升到 64.0% ± 2.4%（×1.8 提升地板），但 best 候选 multi-judge 总分 0.771 持平 —— 证明 LoRA 收紧分布而非提升天花板，符合 alignment fine-tune 的典型 pattern。」
 
 简历空间有限可压成一句：「在 4 模型 × 4 评委 × n=32 × 3 run 跨家族 pairwise 评估中，LoRA 把候选合格率提升 1.8 倍（36% → 64%）、内化平仄规则（移 prompt 后合规率反升至 96%），暴露 LLM-as-judge 对格律权重 ≈ 0 的盲区。」
+
+agent 侧的一句版（实验 B）：「预登记的同基图配对 A/B（n=27 × 2 次独立运行）显示 LLM-driven 改图循环相对写死循环 CLIP 终值打平、但以更少调用和 -19~39% 耗时达到同等结果；主动 replication 撤回了首轮两个不稳观察，并量化出管线噪声 ≈ 臂间效应的 7 倍。」
