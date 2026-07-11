@@ -357,6 +357,9 @@ python -m eval.eval_refine --n 10
 
 # 4. 全自主模式 vs 单轮模式 CLIP 终值 + 耗时对比
 python -m eval.eval_autonomous --n 5
+
+# 5. LLM-driven vs 写死改图循环（同基图配对 A/B，预登记 + 配额熔断 + 全程审计记录）
+python -m eval.eval_llm_loop_ab --limit 1   # 冒烟；全量去掉 --limit
 ```
 
 完整方法论（公式 / 系数 / 评委 prompt / 阈值）见 [`eval/METHODOLOGY.md`](eval/METHODOLOGY.md) —— 该文档冻结当前 commit 的实验方法，保证后续代码漂移仍能解释历史报告。
@@ -409,23 +412,26 @@ naked 模式仅传简短 user request，不带任何格式约束。微调的格�
 
 完整报告：`outputs/eval/eval_poem_<timestamp>.md` · 32 道分层 benchmark 见 [`eval/benchmark_themes.json`](eval/benchmark_themes.json)。
 
-### 代表性发现 · LLM-driven 改图循环 vs fixed loop（n=5 anecdote-level）
+### 代表性发现 · LLM-driven 改图循环 vs 写死循环（同基图配对，n=27 × 2 次独立运行）
 
-`eval_autonomous --n 5 --vlm-judge qwen-vl-max` —— 三臂对比 single_pass vs autonomous(fixed) vs **autonomous(llm-driven)**（让 LLM 每轮决定调 `edit_image` / `refine_poem_and_regen` / `stop`，real tool dispatch via `ToolRegistry`）。
+`eval_llm_loop_ab` —— 27 题（硬约束题集全集，零挑题）共享同一基图后 `_copy_state` 分叉两臂：**写死臂**每轮固定 edit API，**LLM 臂**由 controller 每轮自选 `edit_image(rewrite_regen|edit_api)` / `refine_poem_and_regen` / `stop`（real tool dispatch via `ToolRegistry`），两臂同预算（3 轮、target raw=0.30）。规则跑前预登记进脚本 docstring 并 commit；QuotaMeter 做模型白名单断言 + 预算硬熔断；每题落盘诗小分、逐轮中间图、决策埋点与终端全量镜像。**跑完一次后按预登记做了同条件独立重复（run 2）检验 run-to-run 稳定性。**
 
-| 指标 | autonomous(fixed) − single_pass | autonomous(llm) − autonomous(fixed) |
-|---|---|---|
-| mean Δ CLIP raw | -0.001 (n=4，持平) | **-0.023** (n=4，llm 反而更差) |
-| 中位耗时 vs single_pass | 1.7× | **3.1×** |
-| LLM 工具分布 | — | edit_image 8/8 (100%)，refine_poem 0/8，stop 0/8 |
-| VLM oracle after_better | 0/4 (0%) | 0/5 (0%) |
+| 指标（循环子集） | run 1 | run 2 | 判读 |
+|---|---|---|---|
+| LLM − 写死 mean Δ CLIP raw | +0.004 | −0.004 | **打平复现**（符号翻转、幅度噪声级） |
+| 平均循环耗时（写死 / LLM） | 433s / 263s | 240s / 195s | LLM 更快方向复现，幅度不稳 |
+| 图像 API 调用（写死 / LLM） | 36 / 30 | 23 / 22 | LLM 略少，两次一致 |
+| controller fallback / 改诗 / 主动 stop | 0 / 0 / 0 | 0 / 0 / 0 | 行为特征稳定 |
 
-**初步推测（n=5 严格 anecdote-level，待 n≥20 验证）：**
-1. agentic 在这个窄循环里没赢 fixed loop 且贵 2-3×（**成熟负面结果**，不是 feature 失败）
-2. LLM 路由从未选择切换工具或终止，"agent" 实质上只体现在 edit_image 的 feedback 文字
-3. VLM 独立裁判（loop 外 oracle）看不到任何改图收益 → **CLIP 在中文诗+水墨域可能有 reward hacking 嫌疑**（需 pairwise VLM + n≥20 才能下定论）
+**两次独立运行支持的结论：**
+1. 在这个窄循环里 LLM-driven 控制**没有带来 CLIP 终值优势（打平复现）**，但以略少调用、更短耗时达到相当结果——效率差异来自"达标即停"等可解释机制
+2. run 1 观察到的两个苗头（LLM 臂达标更多、edit_api"选择效应"）**被 run 2 证伪并撤回**——这正是做 replication 的价值
+3. 新量化：同题同管线独立重跑，基图 CLIP 波动（mean |Δ|=0.029）≈ **臂间效应的 7 倍**——单次运行中 ≤0.01 的差异一律不可判读
+4. VLM 硬约束兑现率臂间差异不可判读：像素相同的两张图在 temperature=0 下仍被 qwen-vl-max 判出不同结果（测量噪声 ≥ 臂间差异）
 
-诚实性指标基建已落地（fallback 率 / stale-override / tool 路由分布 / per-decision 列联表 / VLM 独立裁判全套报告），后续每次重跑都能直接对比。完整报告 + caveats + 下一步建议见 [`eval/REPORT_autonomous_n5_20260627.md`](eval/REPORT_autonomous_n5_20260627.md)。
+完整报告：[run 1](eval/REPORT_llm_loop_ab_n27_20260710.md) · [run 2 稳定性对照](eval/REPORT_llm_loop_ab_run2_20260711.md)；直观图库（诗 + 基图 + 逐轮改图 + 两臂终图并排）：[run 1](eval/runs/llm_loop_ab/gallery/GALLERY.md) · [run 2](eval/runs/llm_loop_ab_run2/gallery/GALLERY.md)；原始数据 + 终端全量镜像日志在 `eval/runs/llm_loop_ab*/`。
+
+此前的 n=5 先导实验（[REPORT_autonomous_n5](eval/REPORT_autonomous_n5_20260627.md)）曾给出"LLM 臂更差且贵 3×"的负面信号；本实验用配额隔离（消除 API 失败静默降级本地模型的污染）+ 同基图配对（消除前半段管线噪声）后，方向由负转平——两个混杂因子的识别与消除过程本身即是结论的一部分。
 
 LLM-driven 路径在产品 UI 已可勾选启用（`app.py` "🤖 全自主创作"区域，"LLM 驱动改图循环（实验）"复选框），默认关闭走原 fixed loop 保持向后兼容。
 
