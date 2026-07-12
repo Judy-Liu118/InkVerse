@@ -4,6 +4,11 @@
 
 **AI 古诗创作与水墨画生成系统** —— 本地 LoRA 生成格律诗 + Z-Image Turbo 文生图 + Pairwise 进化择优。消费级显卡可运行。
 
+<p align="center">
+  <img src="https://cdn.jsdelivr.net/gh/Judy-Liu118/InkVerse@main/docs/images/hero-demo.gif" alt="全自主创作实录（12.5 倍速）" width="880">
+</p>
+<p align="center"><sub>全自主创作实录（12.5 倍速，实际 4 分半）——「写一首描写夏景的七言律诗，要有意向荷花和蜻蜓」：LoRA 生成候选 → 硬门控与擂台择优 → 提示词生成与自检 → 生图 → CLIP 0.309 未达目标 → LLM 决策改图 1 轮 → 0.319 达标停止。<a href="docs/images/hero-run-full.jpeg">完整页面截图（含 Agent 思考轨迹全文）</a></sub></p>
+
 输入"写一首描写夏天的七言绝句，要有意向荷花"，系统从生成五首候选、硬门控筛选、擂台进化打磨到最终配图出稿，全程无需人工介入。
 
 古诗生成使用本地 LoRA 微调模型（Qwen2.5-1.5B + LoRA，古典诗词数据集训练），图像生成使用本地 FP8 量化 Z-Image Turbo。两者分时加载，消费级 8GB 显存可运行。古诗评审、切题判断、诗名与提示词生成等语言任务调用 API（推荐阿里百炼 qwen 系列）——本地小模型在鉴赏类环节与大模型存在显著差距。

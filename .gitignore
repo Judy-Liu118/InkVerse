@@ -49,3 +49,4 @@ desktop.ini
 eval/runs/llm_loop_ab/images/
 !eval/runs/**/*.log
 eval/runs/llm_loop_ab_run2/images/
+docs/images/*.mp4
