@@ -50,3 +50,5 @@ eval/runs/llm_loop_ab/images/
 !eval/runs/**/*.log
 eval/runs/llm_loop_ab_run2/images/
 docs/images/*.mp4
+# 首屏演示已改用 GitHub 原生视频播放器，GIF 仅本地留存
+docs/images/hero-demo.gif
