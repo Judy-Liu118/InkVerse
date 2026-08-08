@@ -21,7 +21,7 @@ https://github.com/user-attachments/assets/e3e16375-3ff4-4977-93b6-f8fb514dbccd
 | 关注点 | 对应内容 |
 |---|---|
 | 评估方法与严谨性 | [离线评估](#离线评估)：5 个可复跑脚本 · 10 份入库报告 · 方法论冻结文档 |
-| 结论可信度 | 实验规则于运行前预登记至脚本 docstring 并 commit（[示例](eval/eval_llm_loop_ab.py)）· 原始数据 / 终端全量镜像 / 逐轮图证均已入库（`eval/runs/`）· [190 个离线测试](#测试) |
+| 结论可信度 | 实验规则于运行前预登记至脚本 docstring 并 commit（[示例](eval/eval_llm_loop_ab.py)）· 原始数据 / 终端全量镜像 / 逐轮图证均已入库（`eval/runs/`）· [192 个离线测试](#测试) |
 | 作品质量 | 下方[作品示例](#作品示例)（6 组诗与配图，均为评估 run 真实产物，未经人工筛改）· A/B 实验逐轮改图图库 [run 1](eval/runs/llm_loop_ab/gallery/GALLERY.md) / [run 2](eval/runs/llm_loop_ab_run2/gallery/GALLERY.md) |
 | 系统架构与流程 | [流程图](#流程)（两级诗歌擂台 + CLIP 门控改图循环）· [目录结构](#目录结构) |
 
@@ -287,7 +287,7 @@ InkVerse/
 
 ```bash
 pytest tests/ -v
-# 190 passed in ~8s（全部离线，不触发真实 LLM / 图像 API）
+# 192 passed in ~8s（全部离线，不触发真实 LLM / 图像 API）
 ```
 
 覆盖 ModelAdapter 后端选择与 env-var 回退、AgentState 序列化往返与 Phase 枚举稳定性、平仄/押韵评分边界与合掌及堆砌词库、CLIP 双锚点稀疏关键词自适应权重切换、ToolRegistry 调度与 Function Calling schema 形状、prompt YAML 解析与缺变量 fail-fast、改图循环 controller 的 JSON 兜底与非法工具 fallback、eval 指标数值正确性、VLM ground-truth judge 解析与错误兜底、F3 controlled pair 筛选边界防回归、擂台 pairwise A/B 位随机化的位置分配与弃权透传。详见 `tests/`。

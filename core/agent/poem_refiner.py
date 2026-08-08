@@ -155,7 +155,11 @@ class _PoemRefineMixin:
         self, state: AgentState, candidates: List[Dict],
         refine_adapter=None, score_tolerance: float = 0.03,
     ) -> List[Dict]:
-        """对多首候选诗逐一修改，返回所有改后结果 [{poem, scores, original_poem, refined}]。"""
+        """对多首候选诗逐一修改，返回所有改后结果 [{poem, scores, original_poem, refined}]。
+
+        当前无调用方 —— 全自主模式改用单轨守擂（_evolve_champion）后，这条
+        批量改诗路径就没再接上；保留以备恢复多轨改诗。
+        """
         adapter = refine_adapter or self.generation_adapter
 
         if getattr(adapter, 'backend', '') in ('local', 'local_lora'):
@@ -436,9 +440,18 @@ class _PoemRefineMixin:
 
     def _auto_poem_critique(self, state: AgentState) -> str:
         adapter = self.score_adapter or self.generation_adapter
-        raw = self._raw_clip(state)
         lines = [l.strip() for l in state.poem.split("\n") if l.strip()]
         chars_per = len(lines[0]) if lines else 7
+        # 擂台进化跑在生图之前（autonomous_full_run 第 2 步 vs 第 4 步），
+        # 此时 clip_score_final 仍是默认 0.0，_raw_clip 返回哨兵 -1.0。
+        # 把 -1.0 拼进 prompt 会让评委读到一个不可能出现的图文一致性分
+        # （真实余弦聚在 0.15~0.35），且此刻根本还没有图。只在真有分时才提。
+        raw = self._raw_clip(state)
+        clip_note = (
+            f"当前图文一致性得分 {raw:.3f}（>0.28 为优秀），"
+            "说明部分意象在画面转化时仍有空间。\n"
+            if raw > 0 else ""
+        )
         msg = [
             {
                 "role": "system",
@@ -457,8 +470,7 @@ class _PoemRefineMixin:
                 "role": "user",
                 "content": (
                     f"诗歌（{chars_per}言，共{len(lines)}句）：\n{state.poem}\n\n"
-                    f"当前图文一致性得分 {raw:.3f}（>0.28 为优秀），"
-                    f"说明部分意象在画面转化时仍有空间。\n请点评："
+                    f"{clip_note}请点评："
                 ),
             },
         ]

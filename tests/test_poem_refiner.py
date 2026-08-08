@@ -75,3 +75,54 @@ def test_position_assignment_is_balanced_with_seeded_rng():
     ]
     b_ratio = positions.count("B") / len(positions)
     assert 0.4 < b_ratio < 0.6
+
+
+# ── 诗评 prompt 里的 CLIP 分：无图阶段不得出现哨兵值 ──────────────────────
+# 擂台进化跑在生图之前（autonomous_full_run 第 2 步 vs 第 4 步），此时
+# clip_score_final=0.0，_raw_clip 返回 -1.0。曾把该哨兵直接拼进评委 prompt。
+from core.agent.poem_refiner import _PoemRefineMixin
+from core.agent.state import AgentState
+
+
+class _CritiqueHarness(_PoemRefineMixin):
+    """只为调 _auto_poem_critique：捕获发给评委的 messages，不发真实请求。"""
+
+    def __init__(self):
+        self.captured = None
+        self.generation_adapter = None
+
+        def _generate(messages, **kwargs):
+            self.captured = messages
+            return "点评正文"
+
+        adapter = MagicMock()
+        adapter.generate.side_effect = _generate
+        self.score_adapter = adapter
+
+    @staticmethod
+    def _raw_clip(state):
+        from core.agent.agent import PoetryAgent
+        return PoetryAgent._raw_clip(state)
+
+
+def _critique_user_msg(clip_score_final: float) -> str:
+    h = _CritiqueHarness()
+    state = AgentState()
+    state.poem = "微飔穿竹径\n清响落云间\n松影摇溪浅\n苔痕浸水闲"
+    state.clip_score_final = clip_score_final
+    h._auto_poem_critique(state)
+    return h.captured[1]["content"]
+
+
+def test_critique_omits_clip_line_before_any_image():
+    """擂台阶段尚未生图 → prompt 不提图文一致性，更不能出现 -1.000。"""
+    msg = _critique_user_msg(0.0)
+    assert "图文一致性" not in msg
+    assert "-1.000" not in msg
+    assert "微飔穿竹径" in msg
+
+
+def test_critique_includes_clip_line_once_scored():
+    """真有分数时照常提供（norm 0.65 → raw 0.30）。"""
+    msg = _critique_user_msg(0.65)
+    assert "图文一致性得分 0.300" in msg
