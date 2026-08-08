@@ -81,7 +81,9 @@ def autonomous_full_run(agent, state: AgentState, config: AutonomousConfig = Non
     )
 
     # ═════════════════════════════════════════════════════════════════════
-    # 第 1 步：规划 + 古诗生成（pairwise 五选二）
+    # 第 1 步：规划 + Arena 海选
+    # （每轮生成 5 首 → 硬门控 → 合格池；池 Top3 轮循 pairwise，
+    #   综合分 = 本地分 × 0.75 + pairwise 胜率 × 0.25 → 冠军）
     # ═════════════════════════════════════════════════════════════════════
     state = agent._phase_plan(state)
     if state.phase == Phase.ERROR:

@@ -82,7 +82,7 @@ class AgentState:
 
     # ── 各阶段输出 ───────────────────────────────────────────────────────────
     poem:               str = ""
-    backup_poem:        str = ""    # pairwise 五选二的次优候选
+    backup_poem:        str = ""    # Arena 次优候选（当前仅记录，无下游消费）
     title:              str = ""
     prompt:             str = ""
     creative_brief:     str = ""
