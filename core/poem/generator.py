@@ -16,6 +16,14 @@ from core.logger import get_logger
 _log = get_logger(__name__)
 
 
+def _genre_label(num_lines: int, chars_per_line: int) -> str:
+    """由目标句式反查体裁名，句式不在表内时退回中性描述。"""
+    for name, shape in GENRE_CONFIG.items():
+        if shape == (num_lines, chars_per_line):
+            return name
+    return f"{chars_per_line}字{num_lines}句的古诗"
+
+
 class PoemGenerator:
     def __init__(self):
         self.mm = ModelManager()
@@ -237,8 +245,14 @@ class PoemGenerator:
                 temp = POEM_TEMPERATURE + i * 0.08
                 if prompt_mode == "naked":
                     # 旧路径：保留给 LoRA ablation 使用
-                    if not any(g in user_request for g in ["五言", "七言", "绝句", "律诗"]):
-                        enhanced_request = f"{user_request}。请以五言绝句创作，每句5字，共4句。"
+                    # 补的句式必须与 detect_genre 定出的 num_lines/chars_per_line 一致，
+                    # 否则会指示模型写一个和下游 _normalize / 行数校验不同的体裁
+                    if not self.scorer.mentions_genre(user_request):
+                        enhanced_request = (
+                            f"{user_request}。"
+                            f"请以{_genre_label(num_lines, chars_per_line)}创作，"
+                            f"每句{chars_per_line}字，共{num_lines}句。"
+                        )
                     else:
                         enhanced_request = user_request
                 else:

@@ -141,6 +141,19 @@ class PoemScorer:
                 return full_name, nl, cpl
         return "五言绝句", 4, 5
 
+    @staticmethod
+    def mentions_genre(user_topic: str) -> bool:
+        """用户是否在要求里点明了体裁（全称或简称）。
+
+        detect_genre 无体裁时兜底返回五言绝句，因此区分不了「用户说了五言绝句」
+        与「用户没说、走了默认」。需要这个区分的调用方用本谓词，且与
+        detect_genre 共用同一份词表，避免各自维护平行的关键词列表。
+        """
+        return (
+            any(name in user_topic for name in GENRE_CONFIG)
+            or any(alias in user_topic for alias in PoemScorer.GENRE_ALIASES)
+        )
+
     # ── 完整评分 ───────────────────────────────────────────────────────────
     def evaluate_full(self, poem: str, num_lines: int, chars_per_line: int,
                       user_request: str, adapter, candidate_index: int = 0) -> Dict:

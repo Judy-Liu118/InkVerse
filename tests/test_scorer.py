@@ -115,6 +115,40 @@ def test_detect_genre_default_when_none(scorer):
     assert scorer.detect_genre("给我写个诗") == ("五言绝句", 4, 5)
 
 
+# ── 体裁是否被点名（naked prompt 补句式的前置判断）──────────────────────────
+@pytest.mark.parametrize("user_topic", [
+    "写一首五言绝句，主题是春",
+    "写一首七言律诗，主题是秋",
+    "写一首五绝，主题是月",      # 简称不能漏判，否则会被补上矛盾的句式
+    "写一首七绝，主题是花",
+    "写一首五律，主题是山",
+    "写一首七律，主题是江",
+    "写一首绝句吧",
+    "写一首律诗吧",
+])
+def test_mentions_genre_true(scorer, user_topic):
+    assert scorer.mentions_genre(user_topic) is True
+
+
+@pytest.mark.parametrize("user_topic", [
+    "给我写个诗",
+    "写一首描写秋天的诗，要有意向菊花",
+    "以边塞为主题写首诗",
+])
+def test_mentions_genre_false(scorer, user_topic):
+    assert scorer.mentions_genre(user_topic) is False
+
+
+def test_mentions_genre_covers_detect_genre_vocabulary(scorer):
+    """两者共用词表：detect_genre 能识别的写法，mentions_genre 都要认。
+
+    防回归 —— 历史上 generator 里维护过一份平行关键词列表，漏掉四个简称。
+    """
+    from config import GENRE_CONFIG
+    for word in list(GENRE_CONFIG) + list(type(scorer).GENRE_ALIASES):
+        assert scorer.mentions_genre(f"写一首{word}") is True
+
+
 # ── 同义合掌库 ─────────────────────────────────────────────────────────────
 def test_synonym_clash_groups_non_empty():
     """合掌库不能为空 —— 是改诗质量护栏的核心数据。"""
