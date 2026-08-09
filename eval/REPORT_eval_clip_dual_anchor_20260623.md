@@ -4,14 +4,16 @@ _2026-06-23 数据落盘 · 2026-07-02 入库_
 
 ## 一句话结论
 
-> 生产 dual (α=0.6) 与 VLM oracle 的 Spearman ρ = **+0.365**，点估计高于 prompt_only (+0.301)、稍低于 poem_only (+0.384)——注意 n=15 时 Spearman ρ 的标准误约 0.29，这些差值均**未达统计显著**，只是方向一致的排序信号；α grid search 表明最优 α=0.8 处 ρ = **+0.414**，超过任一单 anchor 上限。**dual 设计被数据支持，但生产权重 α 仍有 +0.049 优化空间**。均值层 mean(dual) 与 mean(single) 差距 ≤ 0.003（配对胜率 53.3%）——**信号在排序相关性维度、不在数值均值维度**。
+> 生产 dual (α=0.6) 与 VLM oracle 的 Spearman ρ = **+0.365**，点估计高于 prompt_only (+0.301)、稍低于 poem_only (+0.384)——注意 n=15 时 Spearman ρ 的标准误约 0.29，这些差值均**未达统计显著**，只是方向一致的排序信号；α grid search 表明最优 α=0.8 处 ρ = **+0.414**，超过任一单 anchor 上限。**dual 设计在千古名诗语料上被数据支持，但生产权重 α 仍有 +0.049 优化空间**。均值层 mean(dual) 与 mean(single) 差距 ≤ 0.003（配对胜率 53.3%）——**信号在排序相关性维度、不在数值均值维度**。
+
+> ⚠️ **2026-08-09 补充（§4.1）**：在 4 个 backend 的同源 LoRA 生诗（n=10）上复现时，**最优 α 全部落在端点（0.0×3 / 1.0×1），未复现名诗组的 α=0.8**，且两 anchor 同质度明显更高（+0.430~+0.867 vs 名诗 +0.304）。因此上述「dual 设计被支持」的结论**限定于名诗语料**；在更接近生产真实输入的 LoRA 生诗上，dual 融合退化为单 anchor。该结果加固了 §4「不要直接把 α 改到 0.8」的工程决定。
 
 ## 0. 导航
 
 - [§1](#1-setup)：Setup（数据集、backend、三种 anchor 策略、生产权重）
 - [§2](#2-vlm-oracle-相关性核心指标)：**VLM oracle Spearman ρ**（核心指标）
 - [§3](#3-均值与配对差值)：均值与配对差值（dual − prompt_only）
-- [§4](#4-α-grid-search-与最优权重建议)：**α grid search + 最优 α=0.8 建议**
+- [§4](#4-α-grid-search-与最优权重建议)：**α grid search + 最优 α=0.8 建议**；§4.1 **跨 backend 复现（2026-08-09 补，结论为负）**
 - [§5](#5-anchor-独立性--融合动机验证)：anchor 间独立性（dual 融合的 SNR 提升动机）
 - [§6](#6-密度分层-caveat)：密度分层（sparse 数据空）
 - [§7](#7-三个代表性样本单张观察)：代表性单张观察（3 个 case）
@@ -128,6 +130,33 @@ CLIP raw cosine ∈ [−1, 1]，实践中中文诗歌 + 水墨图基本落在 [0
 
 **推荐路径**：先跑 §9 提到的 sparse 分层复现 + n=30 稳定性验证，两个 sanity check 通过后再调 config.py 权重。
 
+### 4.1 跨 backend 复现：α 最优点不稳定（2026-08-09 补）
+
+执行 §9 中优先级的「跨 backend 复现」。**零 API 消耗**——全部复用已落盘的 `eval_clip` 原始结果。
+
+**⚠ 先澄清数据集口径。** §9 原文设想的是「三 backend × 同 15 首**名诗**」，**该实验无法执行**：千古名诗 benchmark 只在 `qwen-image-2.0-pro` 上跑过，其他 backend 不存在名诗数据。实际可用的同源组是另一批——**4 个 backend 共享同一批 10 首 LoRA 生诗**（均 `reuse_poems_from: eval_clip_20260622_133658.json`，prompt 模型与 VLM oracle 一致，唯一变量为 image backend）。故：4 个 LoRA 组**相互之间**对照干净；LoRA 组 **vs 名诗组**混杂了诗质量，只能作趋势参照。
+
+| image backend | 语料 | n | prompt_only | poem_only | dual(α=0.6) | 最优 α | 最优 ρ | ρ(poem,prompt) |
+|---|---|---|---|---|---|---|---|---|
+| `wanx2.1-t2i-turbo` | LoRA 生诗 | 10 | +0.118 | −0.042 | +0.021 | **0.0** | +0.118 | +0.430 |
+| `qwen-image-max` | LoRA 生诗 | 10 | +0.254 | −0.110 | +0.103 | **0.0** | +0.254 | +0.624 |
+| `qwen-image-2.0-pro` | LoRA 生诗 | 10 | +0.216 | +0.374 | +0.308 | **1.0** | +0.374 | +0.867 |
+| `qwen-image-2.0-pro-2026-04-22` | LoRA 生诗 | 10 | +0.418 | +0.075 | +0.418 | **0.0** | +0.418 | +0.442 |
+| `qwen-image-2.0-pro`（§4 基线） | 千古名诗 | 15 | +0.301 | +0.384 | +0.365 | **0.8** | +0.414 | +0.304 |
+
+**四个发现：**
+
+1. **4 个 backend 的最优 α 全部落在端点，无一落在开区间内**（3 组 α=0.0、1 组 α=1.0）。按 §4 自身的判定标准（「最优 α 在端点 → dual 退化为单 anchor」），**dual 融合在这批 LoRA 生诗上未获支持**，与名诗组 α=0.8 的结果相反。
+2. **端点方向不一致**——若结论是 prompt anchor 系统性更优，四组应一致退化到 α=0，但 `qwen-image-2.0-pro` 反向退化到 α=1.0。`poem_only` 的 ρ 在**语料完全相同、仅换 backend** 的四组间从 −0.110 摆到 +0.374（跨度 0.484），提示诗锚点在 LoRA 生诗上的信号强度接近噪声量级。
+3. **两 anchor 的同质度显著高于名诗组**（LoRA 组 +0.430 ~ +0.867 vs 名诗组 +0.304），其中 +0.867 已进入 §5 判定表的「融合数学上无用」区间。这在机制上解释了退化：名诗意象密集、视觉可辨识度高，诗锚点能提供独立于提示词的信息；LoRA 生诗的视觉关键词贫乏，提取出的锚点与提示词高度重叠。
+4. **生产 α=0.6 在四组中无一跑赢 max(单 anchor)**（差值 −0.097 / −0.151 / −0.066 / ±0.000）。
+
+**⚠ 统计边界：** n=10 时 Spearman ρ 标准误约 `1/√(n−3) = 0.378`，**本节全部 ρ 值及其组间差异均未达统计显著**。因此可以说的是「在 4 个 backend 的同源 LoRA 生诗上**未能复现**名诗组的开区间最优点，且最优 α 的位置与方向在组间不稳定」；**不能**说「双锚点设计无效」或「prompt_only 优于 dual」——样本量不足以支撑任何一侧的强结论。
+
+**对 §4 工程建议的影响：加固「不要直接把 `CLIP_POEM_WEIGHT` 改到 0.8」的决定。** 现在有了直接证据——α 最优点不跨语料/backend 稳定，且在最接近生产真实输入的 LoRA 生诗上跑到了端点。同时这为 §8 caveat 5「名诗结论不能外推」提供了量化支撑：不只是 ρ 绝对值低，连 α 的最优结构本身都不同。
+
+_数据与完整 α grid：`outputs/eval/analyze_dual_cross_backend_20260809.md` · 复现：`python -m eval.analyze_clip_dual --input outputs/eval/eval_clip_20260622_<ts>.json`（四组分别跑，勿合并——同一批诗在不同 backend 上不独立）_
+
 ## 5. anchor 独立性 → 融合动机验证
 
 dual 融合"数学上有意义"的前提：poem anchor 和 prompt anchor 的 noise 相对独立。用 poem_only 和 prompt_only 分数间的相关性度量独立性：
@@ -198,7 +227,7 @@ n=15 千古名诗 `keyword_word_count` 分布：
 1. **n=15**：样本量小，α = 0.8 是否稳定需 n=30/50 复现
 2. **全 rich**：sparse 分层数据 0，`CLIP_SPARSE_*` 权重完全未验证
 3. **single-shot 一次生图**：无 refine loop / 无多 seed / 无 human-in-loop——**§7.3 的"人物题材命中率 0"只是 single-shot 表现，非 backend 上限**（memory 里明确记录："single-shot 实验禁称'上限'"）
-4. **单 backend**（qwen-image-2.0-pro）：跨 backend 稳定性未验证。raw 数据里其实有 qwen-image-max / qwen-image-2.0-pro-2026-04-22 各一组 n=10，未做入库分析
+4. ~~**单 backend**（qwen-image-2.0-pro）：跨 backend 稳定性未验证~~ **已部分补测（2026-08-09，见 §4.1）**：raw 数据里实际有 **4 组**同源 n=10 数据（wanx2.1-t2i-turbo / qwen-image-max / qwen-image-2.0-pro / 2.0-pro-2026-04-22，共享同一批 LoRA 生诗），已完成 α 分析。**结果为负**：四组最优 α 全部落在端点，未复现名诗组的 α=0.8。但**名诗 benchmark 本身仍只有单 backend 数据**——「同一批名诗跨 backend 是否稳定」这一问题尚未回答，需补跑名诗 × 其他 backend（消耗图像配额）
 5. **千古名诗数据分布特殊**：意象密集 + 视觉可辨识度高，可能上偏 VLM ρ；不能直接外推到 LoRA 生诗上。**dual ρ 从 0.10 → 0.365 的 3.6× 提升，是"诗质量上限"带来的**——LoRA 生诗上的 dual ρ 仍是长期未解痛点
 6. **VLM 作弊未观察到**：S 级国民诗 mean 0.79 vs A 级常见名诗 mean 0.82 反向，若 VLM 因看过原文虚高 S 级则会 S > A。数据支持 VLM 未作弊
 7. **CLIP encoder 内在盲区**（§7.2）：dual anchor 的天花板受 CLIP 语义分辨力限制，α 调优只能优化 rank，无法解决"孤烟直"这类古典意象的语义缺口。修法只有换 CLIP encoder 或额外套一层 VLM gate
@@ -213,7 +242,7 @@ n=15 千古名诗 `keyword_word_count` 分布：
 
 ### 中优先级
 
-- **跨 backend 复现**：raw 数据里已经有 `eval_clip_20260622_213250.json` (qwen-image-2.0-pro-2026-04-22, n=10) 和 `eval_clip_20260622_210101.json` (qwen-image-max, n=10)，做一次三 backend × 同 15 首诗对照分析——回答"最优 α 是否跨 backend 稳定"
+- ✅ ~~**跨 backend 复现**~~ **已执行（2026-08-09，见 §4.1）**，但**原设想不可行**：「三 backend × 同 15 首名诗」无法做——名诗 benchmark 只在一个 backend 上跑过。实际改用 4 组同源 LoRA 生诗（n=10）完成，结论为负（最优 α 全部落端点、方向不一致）。**遗留**：若仍要回答「名诗上最优 α 是否跨 backend 稳定」，须补跑名诗 benchmark × 其他 backend，需消耗图像配额
 - **CLIP 语义盲区独立测**：造对照 pair「语义命中 + CLIP 低」vs「语义 miss + CLIP 高」，定量测 CLIP 分辨力，为"何时用 VLM gate 补 CLIP"提供数据支持
 - **人物/动作题材专项**：`REPORT_classics_15.md` §4 A 已 flag 五张 single-shot 失败图（九月九日 / 登高 / 春晓 / 凉州词 / 清明），refine loop / 多 seed 是否能把命中率从 0/5 拉到 2-3/5
 
@@ -231,7 +260,13 @@ n=15 千古名诗 `keyword_word_count` 分布：
 | `outputs/eval/benchmark_classics.json` | 15 首诗 + visual_keywords + prompt（评测输入）|
 | `outputs/eval/eval_clip_20260623_000437.json/.md` | 前 10 首 eval 原始结果 |
 | `outputs/eval/eval_clip_20260623_001810.json/.md` | 后 5 首 eval 原始结果（同一 config 补跑）|
-| `outputs/eval/analyze_dual_20260623_201449.md` | α grid search 原始输出 |
+| `outputs/eval/analyze_dual_20260623_201449.md` | α grid search 原始输出（名诗组，§4）|
+| `outputs/eval/analyze_dual_cross_backend_20260809.md` | **跨 backend 复现汇总（§4.1）**：5 组完整 α grid + 结论 + 统计边界 |
+| `outputs/eval/eval_clip_20260622_133658.json` | LoRA 生诗 10 首基准组（`wanx2.1-t2i-turbo`），另 3 组均 reuse 此文件的诗 |
+| `outputs/eval/eval_clip_20260622_210101.json` | 同批诗 · `qwen-image-max` |
+| `outputs/eval/eval_clip_20260622_211500.json` | 同批诗 · `qwen-image-2.0-pro` |
+| `outputs/eval/eval_clip_20260622_213250.json` | 同批诗 · `qwen-image-2.0-pro-2026-04-22` |
+| `outputs/eval/analyze_dual_20260809_2216*.md` | §4.1 三组的单组原始输出（`analyze_clip_dual.py` 直出；`qwen-image-max` 那次因同秒时间戳被覆盖，完整数据见上方汇总文件）|
 | `outputs/eval/clip_img_20260622_235822_bailian-qwenimage2/` | 前 10 张水墨图 |
 | `outputs/eval/clip_img_20260623_001405_bailian-qwenimage2/` | 后 5 张水墨图 |
 | `outputs/eval/REPORT_classics_15.md` | 15 首名诗 backend baseline 报告（未入库、和本报告互补：本报告 focus dual vs single，那份 focus backend single-shot 基线——注意是一次生图、无反馈机制的基线表现，不是 backend 能力上限）|
