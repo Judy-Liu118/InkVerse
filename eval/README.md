@@ -139,6 +139,8 @@ python -m eval.dataset --dump   # → eval/benchmark_themes.json
 
 ✅ 正例：「n=32 × 3 run 主跑：LoRA 候选 pass@0.7 合格率从 36.2% ± 2.6% 提升到 64.0% ± 2.4%（×1.8 提升地板），但 best 候选 multi-judge 总分 0.771 持平 —— 证明 LoRA 收紧分布而非提升天花板，符合 alignment fine-tune 的典型 pattern。」
 
-简历空间有限可压成一句：「在 4 模型 × 4 评委 × n=32 × 3 run 跨家族 pairwise 评估中，LoRA 把候选合格率提升 1.8 倍（36% → 64%）、内化平仄规则（移 prompt 后合规率反升至 96%），暴露 LLM-as-judge 对格律权重 ≈ 0 的盲区。」
+简历空间有限可压成一句：「在 4 模型 × 4 评委 × n=32 × 3 run 跨家族 pairwise 评估中，LoRA 把候选合格率提升 1.8 倍（36.2% ± 2.6% → 64.0% ± 2.4%）、内化平仄规则（移除格式 prompt 后合规率未退化，96.4% ± 3.0%），并观察到 LLM-as-judge 对格律赋予极低权重的盲区。」
+
+> ⚠️ 压缩版的两处措辞守则：① 格律一条只能说「未退化」，不能说「反升 / 更好」——naked vs full 的 Δ 是 +1.0pp 而 std 达 ±4.3pp，落在噪声内，说「更好」当场就会被追问幅度与显著性；② 评委格律盲区一条只能说「观察到」，不能说「权重 ≈ 0」——直接证据仅 n=4 controlled pair 且受 BWS 筛选影响，报告中定性为初步推测，强结论需独立 64-pair 重跑（见 [`REPORT_F3_pingze_sensitivity_20260624.md`](REPORT_F3_pingze_sensitivity_20260624.md) 结尾）。
 
 agent 侧的一句版（实验 B）：「预登记的同基图配对 A/B（n=27 × 2 次独立运行）显示 LLM-driven 改图循环相对写死循环 CLIP 终值打平、但以更少调用和 -19~39% 耗时达到同等结果；主动 replication 撤回了首轮两个不稳观察，并量化出管线噪声 ≈ 臂间效应的 7 倍。」

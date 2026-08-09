@@ -27,7 +27,7 @@ https://github.com/user-attachments/assets/e3e16375-3ff4-4977-93b6-f8fb514dbccd
 
 三条工作主线及其代表性结果：
 
-- **微调**：LoRA 将候选合格率提升 1.8 倍（36%→64%）而 best 候选评分持平——提升地板而非天花板；移除格式 prompt 后格律合规率反升至 96%，表明规则已内化进权重（上游数据清洗与训练记录见 [docs/LORA_TRAINING.md](docs/LORA_TRAINING.md)）
+- **微调**：LoRA 将候选合格率提升 1.8 倍（36%→64%）而 best 候选评分持平——提升地板而非天花板；移除格式 prompt 后格律合规率未退化（96%），表明规则已内化进权重（上游数据清洗与训练记录见 [docs/LORA_TRAINING.md](docs/LORA_TRAINING.md)）
 - **评估**：跨家族 4 评委 pairwise 对抗 self-bias；position-bias 审计经历「发现显著 → 自我证伪 → 方向反转 → 随机化防御落地」的完整闭环
 - **agent**：预登记的同基图配对 A/B（n=27 × 2 次独立运行）显示 LLM-driven 改图循环与固定流程循环 CLIP 终值持平、效率占优；replication 撤回了首轮 2 个不稳定观察，并量化出管线噪声约为臂间效应的 7 倍——**基于该数据，此特性在生产环境默认关闭**
 
@@ -128,16 +128,16 @@ python -m eval.eval_llm_loop_ab --limit 1     # 冒烟；全量去掉 --limit
 
 `eval_poem --models local_base local_lora local_lora_naked qwen-plus --scorer deepseek-v4-pro qwen-max glm-4-plus moonshot-v1-32k --n 32 --candidates 5 --repeat 3`
 
-跨 4 LLM 评委（跨家族抗 self-bias）+ 3 run（暴露 LLM noise，主要指标 std 0.005-0.03 → 结论 reproducible）。
+跨 4 LLM 评委（跨家族抗 self-bias）+ 3 run（暴露 LLM noise）。**效应幅度逐条对照噪声地板**：合格率提升 +27.8pp ≫ std 0.024–0.026（稳固）；格律一条的 Δ 落在 std 内，仅支持「未退化」不支持「更优」；pairwise 胜率是波动最大的指标（`local_base` std 0.044），三条结论均不依赖其绝对值。
 
-**1. LoRA 把格律内化进权重 —— 移掉 system prompt 反而更好**
+**1. LoRA 把格律内化进权重 —— 移掉 system prompt 也不退化**
 
-| 指标 | LoRA full | **LoRA naked** | Δ |
+| 指标 | LoRA full | LoRA naked | Δ |
 |---|---|---|---|
-| 平仄合格率 (≥0.8) | 95.4% ± 4.3% | **96.4% ± 3.0%** | +1.0pp |
-| 押韵合格率 (≥0.8) | 32.9% ± 6.2% | **39.0% ± 1.8%** | +6.1pp |
+| 平仄合格率 (≥0.8) | 95.4% ± 4.3% | 96.4% ± 3.0% | +1.0pp |
+| 押韵合格率 (≥0.8) | 32.9% ± 6.2% | 39.0% ± 1.8% | +6.1pp |
 
-naked 模式仅传简短 user request，不带任何格式约束。格律合规来自权重本身，而非 in-context 引导。
+naked 模式仅传简短 user request，不带任何格式约束。**两项 Δ 均落在各自 std 内，不构成 naked 优于 full 的证据**；结论依据的是「移除 in-context 引导后格律没有塌」——若格律靠 prompt 维持，此处应出现显著退化。
 
 **2. LoRA 提升地板，不提升天花板**
 
