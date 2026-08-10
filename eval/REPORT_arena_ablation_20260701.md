@@ -65,6 +65,8 @@ Arena pairwise round-robin（qwen-plus 当 judge，两两 PK 累计胜场）
 | 辅池图像 backend | `bailian:qwen-image-2.0-pro-2026-03-03`（两 arm 严格一致）|
 | target CLIP raw | 0.30 |
 | max_image_improve_rounds | 2 |
+| `image_improve_mode` | **`rewrite_regen`**（改写提示词重新生图，**非** `edit_api` 局部编辑）· 两 arm 相同 |
+| `image_loop_llm_driven` | **`False`**（改图走写死流程，**非** LLM controller 决策）· 两 arm 相同 |
 | max_poem_refine_rounds | arm A=0 · arm B=2 |
 | PAIRWISE_WIN_DELTA | 0.17（arm B 用）|
 | VLM oracle | qwen-vl-max（硬约束核查）|
