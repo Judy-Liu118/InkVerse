@@ -84,7 +84,7 @@ python -m eval.analyze_clip_dual outputs/eval/eval_clip_<timestamp>.json
 
 | 文件 | 实验 | 报告日期 |
 |---|---|---|
-| [`REPORT_eval_clip_dual_anchor_20260623.md`](REPORT_eval_clip_dual_anchor_20260623.md) | **eval_clip 主报告**：双锚点 CLIP vs 单锚点对齐分（n=15 千古名诗 baseline）—— 生产 dual (α=0.6) 与 VLM Spearman ρ=+0.365，显著优于 prompt_only (+0.301)、α grid search 最优 α=0.8 处 ρ=+0.414；dual 设计被数据支持、生产权重仍有 +0.049 优化空间 | 2026-06-23 |
+| [`REPORT_eval_clip_dual_anchor_20260623.md`](REPORT_eval_clip_dual_anchor_20260623.md) | **eval_clip 主报告**：双锚点 CLIP vs 单锚点对齐分（n=15 千古名诗 baseline）—— 生产 dual (α=0.6) 与 VLM Spearman ρ=+0.365，点估计高于 prompt_only (+0.301)（n=15 标准误 ≈0.29，未达显著）、α grid search 最优 α=0.8 处 ρ=+0.414；dual 设计在名诗语料上被数据支持，但 §4.1 跨 backend 复现结论为负、α 最优点不稳定，故不调 `CLIP_POEM_WEIGHT` | 2026-06-23 |
 | [`REPORT_main_n32x3run_20260624.md`](REPORT_main_n32x3run_20260624.md) | 4 模型 × 4 评委 × n=32 × 3 run 主跑 | 2026-06-24 |
 | [`REPORT_F3_pingze_sensitivity_20260624.md`](REPORT_F3_pingze_sensitivity_20260624.md) | F3 retrospective 验证：评委对格律敏感度（n=4-5 controlled pair，初步推测）| 2026-06-24 |
 | [`REPORT_autonomous_n5_20260627.md`](REPORT_autonomous_n5_20260627.md) | LLM-driven 改图循环点亮 + eval 三臂对比（single_pass / autonomous(fixed) / autonomous(llm)）+ 诚实性指标 + VLM 独立裁判（n=5，负面 + caveat 充足）| 2026-06-27 |
