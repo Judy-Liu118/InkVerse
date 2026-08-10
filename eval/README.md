@@ -20,7 +20,7 @@
 - `analyze_clip_dual.py` —— 对 eval_clip JSON 做 dual 锚点合理性分析（α grid search + 锚点互补性）
 - `analyze_judge_pingze_sensitivity.py` —— 对 eval_poem JSON 做 F3 retrospective 分析（按 pingze 差分桶 + controlled pair + winner 切片）
 - `build_classics_benchmark.py` —— 构造 15 首唐诗名作 benchmark 供 eval_clip 复用
-- `build_f3_controlled.py` —— **构造 F3 controlled pair 池**（base 严重出律 + 意境 ≥ lora），把 anecdote (n=4) 推向 n=64+ 强结论；脚本支持 `--dry-run` 验证拓扑，真跑约 1-2hr API
+- `build_f3_controlled.py` —— 构造 F3 controlled pair 池（base 严重出律 + 意境 ≥ lora）。**⚠ 按当前分析口径跑没有意义**：扩到 n=64 也跨不过「格律与意境在诗中不可正交」这道坎（见 [`REPORT_F3`](REPORT_F3_pingze_sensitivity_20260624.md) §4）。改成剂量-反应设计才有价值，详见脚本 docstring；脚本支持 `--dry-run` 验证拓扑，真跑约 1-2hr API
 - `sweep_pairwise_win_delta.py` —— **PAIRWISE_WIN_DELTA 擂台阈值 sweep**（在 [0.10, 0.15, 0.17, 0.20] 上各跑 autonomous fixed loop，看哪个值 CLIP std 最低 + 攻擂率落在 15-40% 健康区间）；monkey-patch config + 自动恢复，`--dry-run` 验证拓扑
 - `vlm_hard_constraint.py` —— **VLM 硬约束命中率评测**（读 sweep 聚合 JSON，30 张图 × qwen-vl-max 逐 keyword 判 present）；独立打补丁 CLIP "图里东西多"盲点，不烧文生图配额，约 780 秒跑完 30 张
 - `dataset.py` —— 主 benchmark 题源 + `--dump` 导出 `benchmark_themes.json`
@@ -86,7 +86,7 @@ python -m eval.analyze_clip_dual outputs/eval/eval_clip_<timestamp>.json
 |---|---|---|
 | [`REPORT_eval_clip_dual_anchor_20260623.md`](REPORT_eval_clip_dual_anchor_20260623.md) | **eval_clip 主报告**：双锚点 CLIP vs 单锚点对齐分（n=15 千古名诗 baseline）—— 生产 dual (α=0.6) 与 VLM Spearman ρ=+0.365，点估计高于 prompt_only (+0.301)（n=15 标准误 ≈0.29，未达显著）、α grid search 最优 α=0.8 处 ρ=+0.414；dual 设计在名诗语料上被数据支持，但 §4.1 跨 backend 复现结论为负、α 最优点不稳定，故不调 `CLIP_POEM_WEIGHT` | 2026-06-23 |
 | [`REPORT_main_n32x3run_20260624.md`](REPORT_main_n32x3run_20260624.md) | 4 模型 × 4 评委 × n=32 × 3 run 主跑 | 2026-06-24 |
-| [`REPORT_F3_pingze_sensitivity_20260624.md`](REPORT_F3_pingze_sensitivity_20260624.md) | F3 retrospective 验证：评委对格律敏感度（n=4-5 controlled pair，初步推测）| 2026-06-24 |
+| [`REPORT_F3_pingze_sensitivity_20260624.md`](REPORT_F3_pingze_sensitivity_20260624.md) | **F3 探索性分析 · 结论为负**：三块分析均不成立（桶间不单调 / n=4 且判据无法区分两种解释 / 方向反 F3 但功效不足）。根因是**格律与意境在诗中不可正交**——设计上回答不了该命题，非样本量问题。附「脚本自动判定的演进」方法学记录 | 2026-06-24<br>_08-10 重写_ |
 | [`REPORT_autonomous_n5_20260627.md`](REPORT_autonomous_n5_20260627.md) | LLM-driven 改图循环点亮 + eval 三臂对比（single_pass / autonomous(fixed) / autonomous(llm)）+ 诚实性指标 + VLM 独立裁判（n=5，负面 + caveat 充足）| 2026-06-27 |
 | [`REPORT_pairwise_win_delta_sweep_2026-06-30.md`](REPORT_pairwise_win_delta_sweep_2026-06-30.md) | 擂台 `PAIRWISE_WIN_DELTA` 阈值 sweep（3 delta × n=10）+ 主题×delta 全景对比 + 攻擂率异常 surface | 2026-06-30 |
 | [`REPORT_vlm_hard_constraint_20260701.md`](REPORT_vlm_hard_constraint_20260701.md) | VLM 硬约束命中率（30 张图逐 keyword yes/no）—— 独立打补丁 CLIP "图里东西多"盲点；rich 题 δ=0.17 命中率 80% 佐证 sweep 结论 | 2026-07-01 |
@@ -141,6 +141,6 @@ python -m eval.dataset --dump   # → eval/benchmark_themes.json
 
 简历空间有限可压成一句：「在 4 模型 × 4 评委 × n=32 × 3 run 跨家族 pairwise 评估中，LoRA 把候选合格率提升 1.8 倍（36.2% ± 2.6% → 64.0% ± 2.4%）、内化平仄规则（移除格式 prompt 后合规率未退化，96.4% ± 3.0%），并观察到 LLM-as-judge 对格律赋予极低权重的盲区。」
 
-> ⚠️ 压缩版的两处措辞守则：① 格律一条只能说「未退化」，不能说「反升 / 更好」——naked vs full 的 Δ 是 +1.0pp 而 std 达 ±4.3pp，落在噪声内，说「更好」当场就会被追问幅度与显著性；② 评委格律盲区一条只能说「观察到」，不能说「权重 ≈ 0」——直接证据仅 n=4 controlled pair 且受 BWS 筛选影响，报告中定性为初步推测，强结论需独立 64-pair 重跑（见 [`REPORT_F3_pingze_sensitivity_20260624.md`](REPORT_F3_pingze_sensitivity_20260624.md) 结尾）。
+> ⚠️ 压缩版的两处措辞守则：① 格律一条只能说「未退化」，不能说「反升 / 更好」——naked vs full 的 Δ 是 +1.0pp 而 std 达 ±4.3pp，落在噪声内，说「更好」当场就会被追问幅度与显著性；② **评委格律盲区一条不要写进简历压缩版**——F3 线已判定为实验设计不可行（**不是**样本量不足、也**不是**「待 64-pair 重跑」）：证明它需要「同一首诗只改平仄、不动意境」的对照，而在诗里做不到。可以说的只有工程决定本身：生产格律保证必须保留 rule-based 硬约束，不能交给 LLM judge（见 [`REPORT_F3_pingze_sensitivity_20260624.md`](REPORT_F3_pingze_sensitivity_20260624.md) §4–§5）。
 
 agent 侧的一句版（实验 B）：「预登记的同基图配对 A/B（n=27 × 2 次独立运行）显示 LLM-driven 改图循环相对写死循环 CLIP 终值打平、但以更少调用和 -19~39% 耗时达到同等结果；主动 replication 撤回了首轮两个不稳观察，并量化出管线噪声 ≈ 臂间效应的 7 倍。」

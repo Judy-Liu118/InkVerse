@@ -156,9 +156,11 @@ naked 模式仅传简短 user request，不带任何格式约束。**两项 Δ �
 | local_lora | 95.4% ± 4.3% | 0.312 ± 0.025 |
 | local_lora_naked | 96.4% ± 3.0% | 0.319 ± 0.028 |
 
-间接证据：base 平仄只有 LoRA 的 1/4，pairwise 胜率反而最高。Retrospective controlled pair 验证（[REPORT_F3](eval/REPORT_F3_pingze_sensitivity_20260624.md)）：n=4 个「base 严重出律 (pingze 25-38%) 但意境维度 ≥ lora」的对决里，**base 胜率 87.5%** —— 意境维度只领先 ~0.1 就翻盘了极端格律差距。反向（lora 格律反差，n=5）→ lora 全败，说明评委并非不在意格律。
+间接证据：base 平仄只有 LoRA 的 1/4，pairwise 胜率反而最高。
 
-**修正表述（n=4-5 较小，属初步推测）：** 评委对格律给低优先级权重，意境维度有 ≥0.1 优势即可覆盖极端格律差距；生产里做格律保证仍必须保留 rule-based scorer 做硬约束，不能替换为 LLM judge。强结论需独立的 64-pair 重跑验证。
+**曾尝试用 retrospective controlled pair 把它做成强结论，已判定该设计不可行**（[REPORT_F3](eval/REPORT_F3_pingze_sensitivity_20260624.md)，2026-08-10 重写为负面结论报告）：要证明「评委对格律的权重」，需要「同一首诗只改平仄、不动意境」的对照，而这在诗里做不到——改平仄必然改字，改字必然改意境。**这不是样本量问题，扩样跨不过去。**
+
+**因此这里不下「评委对格律权重低」的结论。** 真正成立且不依赖该命题的是工程决定本身：**生产做格律保证必须保留 rule-based scorer 做硬约束，不能替换为 LLM judge** —— 理由是规则可验证、可复现，而评委判断与规则分的关系既未被证明、也无法被证明。
 
 **方法论亮点：** 跨家族 4 评委集成（DeepSeek + Qwen + GLM + Moonshot）抗 self-bias · forward+reverse 双向 pairwise 暴露 position bias（摇摆率 23% 公开标注）· BWS 选 best 规避评分饱和 · 3 run mean ± std 区分信号 vs 噪声 · 评委解析失败显式弃权不污染 multi-judge 合成。
 
