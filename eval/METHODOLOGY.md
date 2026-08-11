@@ -94,8 +94,8 @@
 
 | 维度 | 算法 | 阈值/系数 |
 |---|---|---|
-| `pingze`（平仄）| 对比平水韵 8 种格律模板（`PATTERN_5_4`/`PATTERN_5_8`/`PATTERN_7_4`/`PATTERN_7_8`），逐字打分 → 命中率 | 合格阈值 `THRESHOLD_PINGZE=0.8` |
-| `rhyme`（押韵）| 平水韵韵部归类，偶数行末字同部数 / 应押韵字数 | 合格阈值 `THRESHOLD_RHYME=0.8` |
+| `pingze`（平仄）| 对比该体裁的全部格律模板（`PATTERN_5_4`/`PATTERN_5_8`/`PATTERN_7_4`/`PATTERN_7_8`），取最佳匹配模板下的 **合规句数 / 总句数**。单句合规为宽松判定：只查偶数位（五言第 2、4 字，七言加第 6 字，即「一三五不论，二四六分明」），声调无法识别的字跳过算通过 | 取值离散，见 §10 |
+| `rhyme`（押韵）| 偶数行末字归入平水韵部，按**韵部种类数**三档取值：1 种 → 1.0，2 种 → 0.6，≥3 种 → 0.3 | 取值仅 {0.3, 0.6, 1.0}，见 §10 |
 | `imagery`（意象库）| 命中 `ALL_IMAGERY_WORDS` 词表的数量 → log 归一 | — |
 | `cohesion`（主题连贯）| 句间意象重叠 + 情感主题归类 | — |
 | `intent`（意图）| **LLM 评分**（见 §5）| — |
@@ -456,8 +456,8 @@ python -m eval.eval_poem \
 | 阈值 | 值 | 用途 | 统计样本（分母） |
 |---|---|---|---|
 | `POEM_QUALITY_THRESHOLD` | 0.70 | `pass@0.7` 候选合格率 | **全候选**（n_inputs × candidates，如 32×5=160/run），见 `eval_poem.py` `dist["pass_rate_07"]` |
-| `THRESHOLD_PINGZE` | 0.8 | 平仄合格率 (≥0.8) | **best 代表作**（BWS 选出，n_inputs=32/run），见 `_aggregate()` `pingze_pass@0.8` ← `best_scores` |
-| `THRESHOLD_RHYME` | 0.8 | 押韵合格率 (≥0.8) | **best 代表作**（同上） |
+| 平仄合格阈值 | 0.8 | 平仄合格率 (≥0.8) | **best 代表作**（BWS 选出，n_inputs=32/run），见 `_aggregate()` `pingze_pass@0.8` ← `best_scores` |
+| 押韵合格阈值 | 0.8 | 押韵合格率 (≥0.8) | **best 代表作**（同上） |
 | `SCORE_PENALTY_FLOOR` | 0.7 | 单惩罚因子下限 | — |
 | `CLASH_PENALTY_PER_HIT` | 0.75 | 合掌惩罚 | — |
 | `REPETITION_PENALTY_MAX` | 0.15 | 重复惩罚下限 | — |
@@ -466,6 +466,30 @@ python -m eval.eval_poem \
 
 > ⚠ **`pass@0.7` 与平仄/押韵合格率分母不同**，尽管报告里常并排出现：前者统计全部候选，后者只统计每题选出的那 1 首代表作。两者不可互推，跨表引用须注明口径。`pingze` / `rhyme` 本身是 rule-based 确定性分（`core/poem/scorer.py` `_score_pingze` / `_score_rhyme`），不经 LLM；代表作则由评委 BWS 选出，因此合格率的 run 间波动来自候选生成与代表作选择两处，而非评分本身。
 > 主跑 artifact 中 `candidates[].local_scores` 保留了每个候选的 rule 分，全候选口径可事后重算——已对 2026-06-24 主跑做过对照，两口径偏移 1.1–3.7pp 且全在 std 内（见 [`REPORT_main_n32x3run_20260624.md`](REPORT_main_n32x3run_20260624.md) §2.4）。
+
+### 10.1 两个 0.8 的实际来源（易误读，2026-08-11 订正）
+
+**平仄/押韵的 0.8 是 `eval/eval_poem.py` 内的字面量**，写在 `_aggregate()` 里：
+
+```python
+out["pingze_pass@0.8"] = pass_rate([... best_scores ...], 0.8)   # 字面量，非 config
+```
+
+`config.py:182-183` 虽然定义了 `THRESHOLD_PINGZE = 0.8` / `THRESHOLD_RHYME = 0.8`，但**全库没有任何代码读取它们**（`core/poem/theme.py:6` 仅 import 而未使用）。两处 0.8 是分别写的：config 常量来自 2026-06-06 建项目时（`836bae7`），eval 字面量来自 2026-06-20 搭 BWS 体系时（`9676c28`），数值巧合相同，从无引用关系。**改 `config.py` 不会改变 eval 的任何输出**；要改口径须直接改 `eval_poem.py`（且 `pingze_pass@0.8` 这个字段名把 0.8 也写死了，见 `_RATE_METRICS`）。
+
+本文档此前把 `THRESHOLD_PINGZE=0.8` 记作合格阈值来源，属误记，已订正。
+
+### 10.2 阈值落在离散刻度的空隙上
+
+`pingze` = 合规句数/总句数，`rhyme` 只有三档，两者取值都是**离散**的。2026-06-24 主跑全部 1757 个候选的实测取值集合：
+
+| 指标 | 可取值 | ≥0.8 的实际含义 |
+|---|---|---|
+| `pingze`（4 句） | 0, 0.25, 0.5, 0.75, 1.0 | **⟺ = 1.0**，绝句四句零出律 |
+| `pingze`（8 句） | k/8 | **⟺ ≥ 0.875**，律诗最多错一句 |
+| `rhyme`（全体裁） | 0.3, 0.6, 1.0（行数不足则 0.0） | **⟺ = 1.0**，偶数行全部同一韵部 |
+
+即 0.8 并非「达到八成」，而是一道几乎等同于满分的门槛。它也不落在任何可取值上，因此**合格率对阈值的微小改动高度敏感**——尤其当某模型的分布众数恰好卡在 0.75 时（`local_base` 即如此，其 best 代表作 40% 落在 0.75）。敏感性实测见 [`REPORT_main_n32x3run_20260624.md`](REPORT_main_n32x3run_20260624.md) §2.4。引用合格率时应连同阈值一起给出，避免「LoRA 是 base 的 N 倍」这类对阈值敏感的表述脱离口径传播。
 
 ---
 
@@ -479,3 +503,19 @@ python -m eval.eval_poem \
 | 合成 | 直接用 LLM 单值 | ≥3 中位数 / <3 均值 / None 跳过 |
 
 生产仍走 `score_single`（单评委足够、低延迟、低成本）。`score_single_multi_judge` 仅离线评估用。
+
+### 11.1 格律阈值：生产 0.6 与 eval 0.8 互不影响
+
+两边共用同一个打分函数 `scorer._score_pingze` / `_score_rhyme`，但阈值各自独立硬编码，用途也完全不同：
+
+| | 生产 | eval |
+|---|---|---|
+| 阈值 | **0.6** | **0.8** |
+| 位置 | `core/agent/poem_refiner.py:259,261`（`hard_gate_check`） | `eval/eval_poem.py:371,374`（`_aggregate`） |
+| 何时执行 | 运行时，每个挑战者生成后立即跑 | 离线评估收尾，全部 pipeline 跑完后聚合报表时 |
+| 作用 | **拦截**：不过则该挑战者作废、擂主守擂（`_try_challenger` 返回 `None`） | **计数**：只决定报表百分比，不改变任何诗 / best / pairwise 结果 |
+| 0.6 / 0.8 的含义 | 4 句诗 ≥3/4 句合律；8 句诗 ≥5/8 | 4 句诗须零出律；8 句诗最多错一句（见 §10.2）|
+
+生产调用链：`autonomous.py:111` →`poem_refiner._evolve_champion()` → `_try_challenger()` → `hard_gate_check()`。该链仅在 `config.allow_poem_refine` 且已配置 API 改诗模型时触发；纯 LoRA/本地模型会跳过整个擂台阶段。
+
+**`eval/` 在生产运行时不被导入**，因此 eval 的 0.8 永远不会在生产路径上执行；反之调整生产门控的 0.6 也不会改变任何历史评估报告的数字。两个数值不应被视为同一口径的两种取值。
