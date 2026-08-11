@@ -3,7 +3,6 @@ core.poem.theme -- 古诗主题同义词表、意象库、平仄押韵逻辑
 """
 import re
 import pypinyin
-from config import THRESHOLD_PINGZE, THRESHOLD_RHYME
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

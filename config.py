@@ -179,9 +179,6 @@ WEIGHT_IMAGERY  = 0.15
 WEIGHT_COHESION = 0.15      # 略增：意象逻辑连贯与平仄同等重要
 REPETITION_PENALTY_MAX = 0.15
 
-THRESHOLD_PINGZE = 0.8
-THRESHOLD_RHYME = 0.8
-
 # 评分聚合下限：penalty/clash/required_coeff 三个惩罚因子叠乘易导致分数溶解
 # （例如 0.85*0.75*0.75=0.48），给每个因子加下限避免好诗被多重惩罚吞没。
 # 0.7 表示单因子最多扣 30%，三因子叠乘下限 0.343。

@@ -475,7 +475,9 @@ python -m eval.eval_poem \
 out["pingze_pass@0.8"] = pass_rate([... best_scores ...], 0.8)   # 字面量，非 config
 ```
 
-`config.py:182-183` 虽然定义了 `THRESHOLD_PINGZE = 0.8` / `THRESHOLD_RHYME = 0.8`，但**全库没有任何代码读取它们**（`core/poem/theme.py:6` 仅 import 而未使用）。两处 0.8 是分别写的：config 常量来自 2026-06-06 建项目时（`836bae7`），eval 字面量来自 2026-06-20 搭 BWS 体系时（`9676c28`），数值巧合相同，从无引用关系。**改 `config.py` 不会改变 eval 的任何输出**；要改口径须直接改 `eval_poem.py`（且 `pingze_pass@0.8` 这个字段名把 0.8 也写死了，见 `_RATE_METRICS`）。
+`config.py` 中曾另有 `THRESHOLD_PINGZE = 0.8` / `THRESHOLD_RHYME = 0.8` 两个常量（2026-06-06 建项目时引入，`836bae7`），但**全库从未有代码读取过它们**——`core/poem/theme.py` 只 import 而未使用。eval 侧的 0.8 是 2026-06-20 搭 BWS 体系时（`9676c28`）另外写的字面量，与之数值巧合相同、从无引用关系。**这两个死常量与那行 dead import 已于 2026-08-11 删除**，以免再被误认为口径来源。
+
+因此要改 eval 口径须直接改 `eval_poem.py`，且注意 `pingze_pass@0.8` 这个字段名把 0.8 也写死了（见 `_RATE_METRICS`），改阈值需同步字段名与历史 artifact 的可比性。
 
 本文档此前把 `THRESHOLD_PINGZE=0.8` 记作合格阈值来源，属误记，已订正。
 
