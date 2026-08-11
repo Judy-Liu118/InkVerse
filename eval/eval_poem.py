@@ -590,9 +590,11 @@ def _render_markdown(args, models, aggs, results_per_model, matchups_per_input,
     # ── §4 格律合规与速度
     md.append("## 4. 格律合规与速度（辅表 · 硬指标）")
     md.append("")
+    md.append("> 合格率分母 = 每题 BWS 选出的 best 代表作，非全部候选。")
+    md.append("")
     rate_rows = [
-        ["平仄合格率 (≥0.8)"] + [f"{aggs[m]['pingze_pass@0.8']:.1%}" for m in models],
-        ["押韵合格率 (≥0.8)"] + [f"{aggs[m]['rhyme_pass@0.8']:.1%}" for m in models],
+        ["平仄合格率 (≥0.8, best)"] + [f"{aggs[m]['pingze_pass@0.8']:.1%}" for m in models],
+        ["押韵合格率 (≥0.8, best)"] + [f"{aggs[m]['rhyme_pass@0.8']:.1%}" for m in models],
         ["纯生成耗时均值 (s, 不含 load)"]
         + [fmt_num(aggs[m]["mean_gen_elapsed_sec"], 2) for m in models],
         ["模型 load 耗时均值 (s)"]
@@ -966,9 +968,12 @@ def _render_markdown_multirun(args, models: List[str],
     # ── §4 格律合规
     md.append("## 4. 格律合规（mean ± std across runs）")
     md.append("")
+    md.append("> 分母 = 每题 BWS 选出的 best 代表作（n_inputs/run），非全部候选；"
+              "与第 2 节 `pass@0.7`（全候选口径）不可互推。")
+    md.append("")
     rows = []
-    for human, key in (("平仄合格率 (≥0.8)", "pingze_pass@0.8"),
-                       ("押韵合格率 (≥0.8)", "rhyme_pass@0.8")):
+    for human, key in (("平仄合格率 (≥0.8, best)", "pingze_pass@0.8"),
+                       ("押韵合格率 (≥0.8, best)", "rhyme_pass@0.8")):
         rows.append([human] + [
             _fmt_pm(repeated_aggs[m][key + "_mean"],
                     repeated_aggs[m][key + "_std"], pct=True)

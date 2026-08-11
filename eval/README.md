@@ -101,9 +101,11 @@ python -m eval.analyze_clip_dual outputs/eval/eval_clip_<timestamp>.json
 
 详见 [`REPORT_main_n32x3run_20260624.md`](REPORT_main_n32x3run_20260624.md) 第 1-5 节，三个最值得复述的 finding：
 
-1. **LoRA naked > LoRA full**（平仄 96.4% vs 95.4%，押韵 39% vs 33%）→ LoRA 把格律内化进权重，prompt 反而成噪声
+1. **LoRA naked 拿掉格式 prompt 后格律未退化**（平仄 96.4% vs 95.4%，押韵 39% vs 33%）→ LoRA 把格律内化进权重，不依赖 in-context 引导。**两项 Δ 均落在各自 std 内，不可读作 naked 优于 full**
 2. **LoRA 提升地板不提升天花板**：pass@0.7 候选合格率 36.2% → 64.0%（×1.8），但 best 候选 4 维分持平（0.771 vs 0.771）
 3. **LLM-as-judge 对格律不敏感**：base 平仄仅 25.6%（LoRA 的 1/4），pairwise 胜率反而更高 → 评委权重接近全在 intent/imagery/aesthetics，生产里必须保留 rule scorer 做格律硬约束
+
+> 上述 1、3 的平仄/押韵合格率均为 **best 代表作口径**（每题 5 候选经评委 BWS 选出 1 首，n=32/run），非全候选。全候选口径（160/run）为 base 22.2% / LoRA 94.3%，结论一致，对照见主报告第 4 节。
 
 ## 数据集
 

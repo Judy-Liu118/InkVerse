@@ -453,16 +453,19 @@ python -m eval.eval_poem \
 
 ## 10. 阈值清单速查
 
-| 阈值 | 值 | 用途 |
-|---|---|---|
-| `POEM_QUALITY_THRESHOLD` | 0.70 | `pass@0.7` 候选合格率 |
-| `THRESHOLD_PINGZE` | 0.8 | 平仄合格率 (≥0.8) |
-| `THRESHOLD_RHYME` | 0.8 | 押韵合格率 (≥0.8) |
-| `SCORE_PENALTY_FLOOR` | 0.7 | 单惩罚因子下限 |
-| `CLASH_PENALTY_PER_HIT` | 0.75 | 合掌惩罚 |
-| `REPETITION_PENALTY_MAX` | 0.15 | 重复惩罚下限 |
-| `PAIRWISE_WIN_DELTA` | +0.17 | （生产 Arena 用，eval 不用）挑战者胜加分 |
-| `PAIRWISE_LOSE_DELTA` | -0.05 | （同上）挑战者败扣分 |
+| 阈值 | 值 | 用途 | 统计样本（分母） |
+|---|---|---|---|
+| `POEM_QUALITY_THRESHOLD` | 0.70 | `pass@0.7` 候选合格率 | **全候选**（n_inputs × candidates，如 32×5=160/run），见 `eval_poem.py` `dist["pass_rate_07"]` |
+| `THRESHOLD_PINGZE` | 0.8 | 平仄合格率 (≥0.8) | **best 代表作**（BWS 选出，n_inputs=32/run），见 `_aggregate()` `pingze_pass@0.8` ← `best_scores` |
+| `THRESHOLD_RHYME` | 0.8 | 押韵合格率 (≥0.8) | **best 代表作**（同上） |
+| `SCORE_PENALTY_FLOOR` | 0.7 | 单惩罚因子下限 | — |
+| `CLASH_PENALTY_PER_HIT` | 0.75 | 合掌惩罚 | — |
+| `REPETITION_PENALTY_MAX` | 0.15 | 重复惩罚下限 | — |
+| `PAIRWISE_WIN_DELTA` | +0.17 | （生产 Arena 用，eval 不用）挑战者胜加分 | — |
+| `PAIRWISE_LOSE_DELTA` | -0.05 | （同上）挑战者败扣分 | — |
+
+> ⚠ **`pass@0.7` 与平仄/押韵合格率分母不同**，尽管报告里常并排出现：前者统计全部候选，后者只统计每题选出的那 1 首代表作。两者不可互推，跨表引用须注明口径。`pingze` / `rhyme` 本身是 rule-based 确定性分（`core/poem/scorer.py` `_score_pingze` / `_score_rhyme`），不经 LLM；代表作则由评委 BWS 选出，因此合格率的 run 间波动来自候选生成与代表作选择两处，而非评分本身。
+> 主跑 artifact 中 `candidates[].local_scores` 保留了每个候选的 rule 分，全候选口径可事后重算——已对 2026-06-24 主跑做过对照，两口径偏移 1.1–3.7pp 且全在 std 内（见 [`REPORT_main_n32x3run_20260624.md`](REPORT_main_n32x3run_20260624.md) §2.4）。
 
 ---
 
