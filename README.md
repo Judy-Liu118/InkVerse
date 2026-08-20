@@ -55,7 +55,7 @@ https://github.com/user-attachments/assets/e3e16375-3ff4-4977-93b6-f8fb514dbccd
 
 ```mermaid
 flowchart TD
-    A(["用户一句话要求"]) --> B["任务规划<br>体裁 · 意象 · 风格解析"]
+    A(["用户一句话要求"]) --> B["输入校验"]
 
     subgraph P ["诗 —— 本地 LoRA + 两级擂台"]
         C["Arena 海选<br>LoRA 生成 5 首候选"] --> D["硬门控<br>押韵 · 平仄 · 堆砌词 · 重复"]
